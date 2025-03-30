@@ -11,16 +11,27 @@ public class SchemaInitializer {
 
             conn.setAutoCommit(false);
 
+            //0. Guests Table (Currently Reading)
+            String createGuestsTable = """
+                    CREATE TABLE guests (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        name VARCHAR(100) NOT NULL,
+                        contact VARCHAR(20) NOT NULL UNIQUE,
+                        visit_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                    """;
+            stmt.execute(createGuestsTable);
+
             // 1. Users Table (Contains Subscription Users & Guests)
             String createUsersTable = """
-                CREATE TABLE IF NOT EXISTS users (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    name VARCHAR(100) NOT NULL,
-                    email VARCHAR(100) UNIQUE NOT NULL,
-                    password_hash VARCHAR(255) NOT NULL,
-                    type ENUM('Subscription', 'Guest') NOT NULL DEFAULT 'Subscription'
-                );
-            """;
+                    CREATE TABLE IF NOT EXISTS users (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        name VARCHAR(100) NOT NULL,
+                        email VARCHAR(100) UNIQUE NOT NULL,
+                        password_hash VARCHAR(255) NOT NULL,
+                        date_of_joining DATE NOT NULL DEFAULT (CURRENT_DATE)
+                    );
+                    """;
             stmt.execute(createUsersTable);
 
             // 2. Staff Table (Separate from Users)
@@ -89,12 +100,12 @@ public class SchemaInitializer {
 
             // 7. Reservations Table (For Subscription Users)
             String createReservationsTable = """
-                CREATE TABLE IF NOT EXISTS reservations (
+                CREATE TABLE reservations (
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     user_id INT NOT NULL,
                     book_id INT NOT NULL,
-                    reserved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    status ENUM('Pending', 'Completed', 'Cancelled') DEFAULT 'Pending',
+                    request_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    expected_availability DATE,
                     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
                     FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
                 );
@@ -103,34 +114,30 @@ public class SchemaInitializer {
 
             // 8. Book Requests Table (For Subscription Users & Guests)
             String createBookRequestsTable = """
-                CREATE TABLE IF NOT EXISTS book_requests (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    user_id INT NULL,  -- Nullable for Guests
-                    guest_name VARCHAR(100) NULL,
-                    guest_contact VARCHAR(20) NULL,
-                    title VARCHAR(255) NOT NULL,
-                    author VARCHAR(255) NOT NULL,
-                    status ENUM('Pending', 'Approved', 'Rejected') DEFAULT 'Pending',
-                    request_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
-                );
+                    CREATE TABLE book_requests (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        user_id INT NOT NULL,
+                        book_id INT NOT NULL,
+                        request_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        status ENUM('Pending', 'Approved', 'Rejected') DEFAULT 'Pending',
+                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                        FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
+                    );
             """;
             stmt.execute(createBookRequestsTable);
 
             // 9. Guest Book Usage Table (Tracks Guest Reading Time & Charges)
             String createGuestBookUsageTable = """
-                CREATE TABLE IF NOT EXISTS guest_book_usage (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    guest_name VARCHAR(100) NOT NULL,
-                    guest_contact VARCHAR(20) NOT NULL,
-                    book_id INT NOT NULL,
-                    start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    end_time TIMESTAMP NULL,
-                    total_hours DECIMAL(5,2) GENERATED ALWAYS AS (TIMESTAMPDIFF(SECOND, start_time, end_time) / 3600.0) VIRTUAL,
-                    amount_due DECIMAL(10,2) DEFAULT 0,
-                    payment_status ENUM('Pending', 'Paid') DEFAULT 'Pending',
-                    FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
-                );
+                            CREATE TABLE guest_book_usage (
+                                id INT AUTO_INCREMENT PRIMARY KEY,
+                                guest_id INT NOT NULL,
+                                book_id INT NOT NULL,
+                                start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                end_time TIMESTAMP NULL,
+                                FOREIGN KEY (guest_id) REFERENCES guests(id) ON DELETE CASCADE,
+                                FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
+                            );
+
             """;
             stmt.execute(createGuestBookUsageTable);
 

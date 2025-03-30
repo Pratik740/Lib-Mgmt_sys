@@ -1,12 +1,25 @@
 package models;
 
-public class User extends Person {
-    private boolean isSubscriptionUser; // Subscription or Guest
+import java.time.LocalDate;
 
-    public User(int id, String name, String email, String passwordHash, boolean isSubscriptionUser) {
+public class User extends Person {
+    private LocalDate dateOfJoining;
+
+    public User(int id, String name, String email, String passwordHash, LocalDate dateOfJoining) {
         super(id, name, email, passwordHash);
-        this.isSubscriptionUser = isSubscriptionUser;
+        this.dateOfJoining = dateOfJoining;
     }
 
-    public boolean isSubscriptionUser() { return isSubscriptionUser; }
+    public LocalDate getDateOfJoining() {
+        return dateOfJoining;
+    }
+
+    public void setDateOfJoining(LocalDate dateOfJoining) {
+        this.dateOfJoining = dateOfJoining;
+    }
+
+    @Override
+    public String toString() {
+        return super.toString() + ", Date of Joining: " + dateOfJoining;
+    }
 }
