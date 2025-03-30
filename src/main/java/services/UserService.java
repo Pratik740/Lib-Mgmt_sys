@@ -269,4 +269,78 @@ public class UserService extends PersonService{
     }
 
 
+    public void printUserBorrowedBooks(int userId) {
+        String query = """
+        SELECT DISTINCT b.title
+        FROM transactions t
+        JOIN book_copies bc ON t.book_copy_id = bc.id
+        JOIN books b ON bc.book_id = b.id
+        WHERE t.user_id = ? AND t.return_date IS NULL
+        ORDER BY t.due_date ASC
+    """;
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+
+            stmt.setInt(1, userId);
+            ResultSet rs = stmt.executeQuery();
+
+            System.out.println("Books currently borrowed by user ID " + userId + ":");
+
+            boolean hasBooks = false;
+            while (rs.next()) {
+                hasBooks = true;
+                System.out.println("- " + rs.getString("title"));
+            }
+
+            if (!hasBooks) {
+                System.out.println("No books borrowed.");
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void printUserFines(int userId) {
+        String query = """
+        SELECT b.title, f.amount, f.status
+        FROM fines f
+        JOIN transactions t ON f.transaction_id = t.id
+        JOIN book_copies bc ON t.book_copy_id = bc.id
+        JOIN books b ON bc.book_id = b.id
+        WHERE f.user_id = ?
+        ORDER BY f.status ASC, f.amount DESC
+    """;
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+
+            stmt.setInt(1, userId);
+            ResultSet rs = stmt.executeQuery();
+
+            System.out.println("Fines accumulated by user ID " + userId + ":");
+
+            boolean hasFines = false;
+            while (rs.next()) {
+                hasFines = true;
+                String bookTitle = rs.getString("title");
+                double fineAmount = rs.getDouble("amount");
+                String status = rs.getString("status");
+
+                System.out.println("- Book: " + bookTitle + " | Fine: ₹" + fineAmount + " | Status: " + status);
+            }
+
+            if (!hasFines) {
+                System.out.println("No fines recorded.");
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+
+
 }
