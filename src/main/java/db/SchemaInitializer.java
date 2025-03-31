@@ -134,8 +134,8 @@ public class SchemaInitializer {
                                 book_id INT NOT NULL,
                                 start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                                 end_time TIMESTAMP NULL,
-                                FOREIGN KEY (guest_id) REFERENCES guests(id) ON DELETE CASCADE,
-                                FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
+                                fine_amt DECIMAL(10,2) DEFAULT 0,
+                                FOREIGN KEY (guest_id) REFERENCES guests(id) ON DELETE CASCADE
                             );
 
             """;

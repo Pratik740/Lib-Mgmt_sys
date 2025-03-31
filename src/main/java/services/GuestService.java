@@ -128,6 +128,6 @@ public class GuestService extends PersonService{
     }
 
     //Currently reading books
-    public  void currentReading(int guestId);
+    //public  void currentReading(int guestId);
 
 }
