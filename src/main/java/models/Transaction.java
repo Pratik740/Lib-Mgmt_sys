@@ -36,5 +36,6 @@ public class Transaction {
     public int getId(){
         return this.id;
     }
+
     public void setReturnDate(LocalDate returnDate){this.returnDate = returnDate;}
 }

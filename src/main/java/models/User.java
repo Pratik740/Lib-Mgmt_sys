@@ -40,12 +40,16 @@ public class User extends Person {
         return super.toString() + ", Date of Joining: " + dateOfJoining;
     }
 
+
     public void SetTransaction(Transaction transaction) {
         transactions.add(transaction);
     }
+
+
     public void SetBook(Book book) {
         books_borrowed.add(book);
     }
+
     public double ComputeFine(){
         double sum = 0;
         for(Transaction t: transactions){
@@ -53,6 +57,7 @@ public class User extends Person {
         }
         return sum;
     }
+
     public void removeBook(int bookId) {
         for(Book b: books_borrowed){
             if(b.getId() == bookId){
@@ -61,16 +66,17 @@ public class User extends Person {
             }
         }
     }
+
     public void UpdateTransaction(int transactionId) {
         for(Transaction t: transactions){
             if(t.getId() == transactionId){
-                t.setReturnDate(LocalDate.now());
+                transactions.remove(t);
                 break;
             }
         }
     }
 
     //User selects book_copy_id to
-    public int helper1()
+    //public int helper1()
 
 }

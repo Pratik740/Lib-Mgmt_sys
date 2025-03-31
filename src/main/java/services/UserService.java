@@ -21,7 +21,7 @@ public class UserService extends PersonService{
 
             stmt.executeUpdate();
 
-            loginUser(name, email);
+            return loginUser(name, email);
 
         } catch (SQLException e) {
             e.printStackTrace();
@@ -106,6 +106,10 @@ public class UserService extends PersonService{
         user.removeBook(bookId);
 
         int transactionId = 0;
+
+        boolean overdue = false;
+        LocalDate dueDate = null;
+
         String transactionFinder = """
                                         SELECT a.book_id, a.title, a.author, a.isbn, a.genre_id,
                                                a.copy_number, a.available,
@@ -118,32 +122,54 @@ public class UserService extends PersonService{
                                                           JOIN book_copies ON books.id = book_copies.book_id
                                                  WHERE books.id = ?
                                              ) AS a
-                                                 JOIN transactions t ON a.copy_id = t.book_copy_id;
+                                                 JOIN transactions t ON a.copy_id = t.book_copy_id WHERE t.user_id = ?;
                                         
                                     """;
-        String query = "UPDATE transactions SET return_date = ? WHERE id = ?";
+        String query = """
+                       UPDATE transactions
+                       SET return_date = ?,
+                       fine_amount = 0
+                       WHERE id = ?;
+                       """;
+
+        String fineQuery = """
+                           UPDATE fines
+                           SET amount = ?, status = 'Paid'
+                           WHERE id = ?;
+                           """;
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement stmt1 = conn.prepareStatement(transactionFinder);
-             PreparedStatement stmt2 = conn.prepareStatement(query)) {
+             PreparedStatement stmt2 = conn.prepareStatement(query);
+             PreparedStatement stmt3 = conn.prepareStatement(fineQuery)) {
 
             stmt1.setInt(1, bookId);
+            stmt1.setInt(2, user.getId());
             ResultSet rs1 = stmt1.executeQuery();
 
             if (rs1.next()) {
                 transactionId = rs1.getInt("transaction_id");
+
+                if (LocalDate.now().isAfter(rs1.getDate("due_date").toLocalDate())) {
+                    overdue = true;
+                    dueDate = rs1.getDate("due_date").toLocalDate();
+                }
             }
 
             stmt2.setDate(1, new Date(System.currentTimeMillis()));
             stmt2.setInt(2, transactionId);
             stmt2.executeUpdate();
 
+            if (overdue) {
+                stmt3.setInt(1, (int) ChronoUnit.DAYS.between(LocalDate.now(), dueDate) * 10);
+                stmt3.setInt(2, user.getId());
+            }
+
         } catch (SQLException e) {
             e.printStackTrace();
         }
 
         user.UpdateTransaction(transactionId);
-
 
 
     }
