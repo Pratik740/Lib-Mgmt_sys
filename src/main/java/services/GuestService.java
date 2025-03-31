@@ -9,11 +9,8 @@ import java.util.List;
 
 public class GuestService extends PersonService{
 
-    //In-memory tracking of what guest is currently reading
-    private final List<Book> guestReadingList = new ArrayList<>();
-
     // Start a guest session
-    public Guest startSession(String name, String contact) {
+    public Guest guestLogin(String name, String contact) {
         String query = "INSERT INTO guests (name, contact) VALUES (?, ?)";
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
@@ -26,7 +23,7 @@ public class GuestService extends PersonService{
                 if (generatedKeys.next()) {
                     int guestId = generatedKeys.getInt(1);
                     System.out.println("Guest session started. Guest ID: " + guestId);
-                    return new Guest(name, contact);
+                    return new Guest(guestId, name, contact);
                 }
             }
         } catch (SQLIntegrityConstraintViolationException e) {
@@ -39,7 +36,8 @@ public class GuestService extends PersonService{
 
 
     //Guest starts reading a book
-    public void startReading(int guestId, int bookID) {
+    public void startReading(Guest guest, int bookID) {
+        int guestId = guest.getId();
         String query = "INSERT INTO guest_book_usage (guest_id, book_id, start_time) VALUES (?, ?, CURRENT_TIMESTAMP)";
         String book_find = "SELECT * FROM books WHERE books.id = ?";
 
@@ -59,8 +57,9 @@ public class GuestService extends PersonService{
                                     rs.getString("author"),
                                     rs.getString("isbn"),
                                     rs.getInt("genre_id"));
-            guestReadingList.add(to_add);
 
+
+            guest.addBook(to_add);
         } catch (SQLException e) {
             e.printStackTrace();
         }

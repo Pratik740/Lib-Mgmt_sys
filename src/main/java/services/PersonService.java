@@ -65,4 +65,23 @@ public class PersonService {
             System.out.printf("- %s by %s (ISBN: %s)%n", book.getTitle(), book.getAuthor(), book.getIsbn());
         }
     }
+
+    public void viewBooksByAuthor(String author) {
+        String query = "SELECT * FROM books WHERE author = ?";
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+
+            stmt.setString(1, author);
+            ResultSet rs = stmt.executeQuery();
+
+            System.out.printf("Available Books by '%s' : -%n", author);
+            while (rs.next()) {
+                System.out.println(rs.getInt("id") + rs.getString("title"));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
 }
