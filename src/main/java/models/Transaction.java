@@ -21,7 +21,20 @@ public class Transaction {
         this.fineAmount = fineAmount;
     }
 
+    @Override
+    public String toString() {
+        return "id: " + this.id + " userId: " + this.userId + " bookCopyId: " + this.bookCopyId + " issueDate: " + this.issueDate + " dueDate: " + this.dueDate + " returnDate: " + this.returnDate + " fineAmount: " + this.fineAmount;
+    }
+
     public boolean isOverdue() {
         return returnDate == null && LocalDate.now().isAfter(dueDate);
     }
+
+    public double getfineAmount() {
+        return this.fineAmount;
+    }
+    public int getId(){
+        return this.id;
+    }
+    public void setReturnDate(LocalDate returnDate){this.returnDate = returnDate;}
 }

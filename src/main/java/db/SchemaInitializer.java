@@ -90,7 +90,7 @@ public class SchemaInitializer {
                     book_copy_id INT NOT NULL,
                     issue_date DATE NOT NULL,
                     due_date DATE NOT NULL,
-                    return_date DATE,
+                    return_date DATE default NULL,
                     fine_amount DECIMAL(10,2) DEFAULT 0,
                     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
                     FOREIGN KEY (book_copy_id) REFERENCES book_copies(id) ON DELETE CASCADE
@@ -112,34 +112,34 @@ public class SchemaInitializer {
             """;
             stmt.execute(createReservationsTable);
 
-            // 8. Book Requests Table (For Subscription Users & Guests)
-            String createBookRequestsTable = """
-                    CREATE TABLE book_requests (
-                        id INT AUTO_INCREMENT PRIMARY KEY,
-                        user_id INT NOT NULL,
-                        book_id INT NOT NULL,
-                        request_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        status ENUM('Pending', 'Approved', 'Rejected') DEFAULT 'Pending',
-                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-                        FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
-                    );
-            """;
-            stmt.execute(createBookRequestsTable);
-
-            // 9. Guest Book Usage Table (Tracks Guest Reading Time & Charges)
-            String createGuestBookUsageTable = """
-                            CREATE TABLE guest_book_usage (
-                                id INT AUTO_INCREMENT PRIMARY KEY,
-                                guest_id INT NOT NULL,
-                                book_id INT NOT NULL,
-                                start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                                end_time TIMESTAMP NULL,
-                                fine_amt DECIMAL(10,2) DEFAULT 0,
-                                FOREIGN KEY (guest_id) REFERENCES guests(id) ON DELETE CASCADE
-                            );
-
-            """;
-            stmt.execute(createGuestBookUsageTable);
+//            // 8. Book Requests Table (For Subscription Users & Guests)
+//            String createBookRequestsTable = """
+//                    CREATE TABLE book_requests (
+//                        id INT AUTO_INCREMENT PRIMARY KEY,
+//                        user_id INT NOT NULL,
+//                        book_id INT NOT NULL,
+//                        request_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+//                        status ENUM('Pending', 'Approved', 'Rejected') DEFAULT 'Pending',
+//                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+//                        FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
+//                    );
+//            """;
+//            stmt.execute(createBookRequestsTable);
+//
+//            // 9. Guest Book Usage Table (Tracks Guest Reading Time & Charges)
+//            String createGuestBookUsageTable = """
+//                            CREATE TABLE guest_book_usage (
+//                                id INT AUTO_INCREMENT PRIMARY KEY,
+//                                guest_id INT NOT NULL,
+//                                book_id INT NOT NULL,
+//                                start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+//                                end_time TIMESTAMP NULL,
+//                                fine_amt DECIMAL(10,2) DEFAULT 0,
+//                                FOREIGN KEY (guest_id) REFERENCES guests(id) ON DELETE CASCADE
+//                            );
+//
+//            """;
+//            stmt.execute(createGuestBookUsageTable);
 
             // 10. Fines Table (For Subscription Users)
             String createFinesTable = """

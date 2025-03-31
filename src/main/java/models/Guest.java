@@ -16,9 +16,7 @@ public class Guest {
         this.contact = contact;
     }
 
-    public int getId() {return id;
-    }
-
+    public int getId() { return id; }
     public String getName() { return name; }
     public String getContact() { return contact; }
 
@@ -27,7 +25,7 @@ public class Guest {
 
             System.out.println(this.name + " has the following books currently: -\n");
             for (Book book : this.currently_reading_books) {
-                System.out.println(book.getTitle());
+                System.out.println(book);
             }
         }
         else {
@@ -37,5 +35,16 @@ public class Guest {
 
     public void addBook(Book book) {
         this.currently_reading_books.add(book);
+    }
+
+    public void removeBook(int bookID) {
+        int i = 0;
+        while (i < this.currently_reading_books.size()) {
+            if (this.currently_reading_books.get(i).getId() == bookID) {
+                this.currently_reading_books.remove(i);
+                break;
+            }
+            i += 1;
+        }
     }
 }

@@ -1,23 +1,31 @@
 package services;
 
 import db.DatabaseManager;
+import models.Transaction;
 import models.User;
+import models.Book;
 import java.sql.*;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 
 public class UserService extends PersonService{
 
     // Register a new user
-    public boolean registerUser(String name, String email, String passwordHash) {
-        String query = "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)";
+    public User registerUser(String name, String email, String passwordHash) {
+        String query = "INSERT INTO users (name, email, password_hash, date_of_joining) VALUES (?, ?, ?, current_timestamp())";
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {
             stmt.setString(1, name);
             stmt.setString(2, email);
             stmt.setString(3, passwordHash);
-            return stmt.executeUpdate() > 0;
+
+            stmt.executeUpdate();
+
+            loginUser(name, email);
+
         } catch (SQLException e) {
             e.printStackTrace();
-            return false;
+            return null;
         }
     }
 
@@ -44,44 +52,103 @@ public class UserService extends PersonService{
         return null;
     }
 
-    // Fetch user profile by ID
-    public User getUserById(int userId) {
-        String query = "SELECT * FROM users WHERE id = ?";
+    public void addTransaction(User user) {
+        String query = "SELECT * FROM transactions WHERE user_id = ? AND return_date is null";
         try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(query)) {
-            stmt.setInt(1, userId);
+             PreparedStatement stmt = conn.prepareStatement(query);) {
+            stmt.setInt(1, user.getId());
             ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                return new User(
-                        rs.getInt("id"),
-                        rs.getString("name"),
-                        rs.getString("email"),
-                        rs.getString("password_hash"),
-                        rs.getDate("date_of_joining").toLocalDate()
-                );
+            while(rs.next()) {
+                user.SetTransaction(new Transaction(rs.getInt("id"),
+                                                    rs.getInt("user_id"),
+                                                    rs.getInt("book_copy_id"),
+                                                    rs.getDate("issue_date").toLocalDate(),
+                                                    rs.getDate("due_date").toLocalDate(),
+                                                    null,
+                                                    LocalDate.now().isAfter(rs.getDate("due_date").toLocalDate()) ? ((int) ChronoUnit.DAYS.between(rs.getDate("due_date").toLocalDate(), LocalDate.now())*10): 0));
             }
+
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        return null;
+
     }
 
-    // Update user details
-    public boolean updateUser(int userId, String newName, String newEmail, String newPasswordHash) {
-        String query = "UPDATE users SET name = ?, email = ?, password_hash = ? WHERE id = ?";
+    public void addBorrowedBook(User user) {
+        String query = "SELECT b.id AS book_id, b.title, b.author, b.isbn, b.genre_id " +
+                "FROM transactions t " +
+                "JOIN book_copies bc ON t.book_copy_id = bc.id " +
+                "JOIN books b ON bc.book_id = b.id " +
+                "WHERE t.user_id = ? AND t.return_date IS NULL";
+
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {
-            stmt.setString(1, newName);
-            stmt.setString(2, newEmail);
-            stmt.setString(3, newPasswordHash);
-            stmt.setInt(4, userId);
-            return stmt.executeUpdate() > 0;
+            stmt.setInt(1, user.getId());
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                Book book = new Book(rs.getInt("book_id"),
+                        rs.getString("title"),
+                        rs.getString("author"),
+                        rs.getString("isbn"),
+                        rs.getInt("genre_id"));  // Using genreId as int
+                user.SetBook(book);  // Assuming User class has addBook method
+            }
 
         } catch (SQLException e) {
             e.printStackTrace();
-            return false;
         }
+
     }
+
+    public void returnBook(User user , int bookId) {
+
+        user.removeBook(bookId);
+
+        int transactionId = 0;
+        String transactionFinder = """
+                                        SELECT a.book_id, a.title, a.author, a.isbn, a.genre_id,
+                                               a.copy_number, a.available,
+                                               t.id AS transaction_id, t.user_id, t.issue_date, t.due_date,
+                                               t.return_date, t.fine_amount
+                                        FROM (
+                                                 SELECT books.id AS book_id, books.title, books.author, books.isbn, books.genre_id,
+                                                        book_copies.id AS copy_id, book_copies.copy_number, book_copies.available
+                                                 FROM books
+                                                          JOIN book_copies ON books.id = book_copies.book_id
+                                                 WHERE books.id = ?
+                                             ) AS a
+                                                 JOIN transactions t ON a.copy_id = t.book_copy_id;
+                                        
+                                    """;
+        String query = "UPDATE transactions SET return_date = ? WHERE id = ?";
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement stmt1 = conn.prepareStatement(transactionFinder);
+             PreparedStatement stmt2 = conn.prepareStatement(query)) {
+
+            stmt1.setInt(1, bookId);
+            ResultSet rs1 = stmt1.executeQuery();
+
+            if (rs1.next()) {
+                transactionId = rs1.getInt("transaction_id");
+            }
+
+            stmt2.setDate(1, new Date(System.currentTimeMillis()));
+            stmt2.setInt(2, transactionId);
+            stmt2.executeUpdate();
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        user.UpdateTransaction(transactionId);
+
+
+
+    }
+
+
 
     // Delete user account
     public boolean deleteUser(int userId) {

@@ -66,18 +66,13 @@ public class GuestService extends PersonService{
     }
 
     // Guest returns a book
-    public boolean returnBook(int guestId, int bookId) {
+    public boolean returnBook(Guest guest, int bookId) {
 
-        int i = 0;
-        while (guestReadingList.size() > i) {
+        int guestId = guest.getId();
 
-            if (guestReadingList.get(i).getId() == bookId) {
-                break;
-            }
-        }
-        guestReadingList.remove(i);
+        guest.removeBook(bookId);
 
-        String query = "UPDATE guest_book_usage SET end_time = CURRENT_TIMESTAMP WHERE guest_id = ? AND book_id = ? AND end_time IS NULL";
+        String query = "UPDATE guest_book_usage SET end_time = CURRENT_TIMESTAMP, fine_amt = GREATEST(TIMESTAMPDIFF(MINUTE, start_time, NOW()), 0) WHERE guest_id = ? AND book_id = ? AND end_time IS NULL";
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {
             stmt.setInt(1, guestId);
@@ -110,7 +105,7 @@ public class GuestService extends PersonService{
 
     public double calculateFine(int guestId) {
         String query = """
-        SELECT SUM(GREATEST(TIMESTAMPDIFF(MINUTE, start_time, COALESCE(end_time, NOW())) - 30, 0) / 10 * 5) AS total_fine
+        SELECT SUM(fine_amt) AS total_fine
         FROM guest_book_usage WHERE guest_id = ?
     """;
         try (Connection conn = DatabaseManager.getConnection();
@@ -125,8 +120,5 @@ public class GuestService extends PersonService{
         }
         return 0.0;
     }
-
-    //Currently reading books
-    //public  void currentReading(int guestId);
 
 }

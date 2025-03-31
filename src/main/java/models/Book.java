@@ -20,4 +20,10 @@ public class Book {
     public String getAuthor() { return author; }
     public String getIsbn() { return isbn; }
     public int getGenreId() { return genreId; }
+
+    @Override
+    public String toString() {
+        return "Book ID: " + this.id + " Title: " + this.title + " Author: " + this.author + " ISBN: " + this.isbn + " Genre: " + this.genreId;
+    }
+
 }
