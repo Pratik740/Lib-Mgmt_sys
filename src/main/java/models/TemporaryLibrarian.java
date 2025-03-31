@@ -18,13 +18,4 @@ public class TemporaryLibrarian extends Librarian {
     public boolean isContractExpired() {
         return LocalDate.now().isAfter(contractEndDate);
     }
-
-    @Override
-    public void manageBooks() {
-        if (isContractExpired()) {
-            System.out.println("Temporary librarian contract expired. Cannot manage books.");
-        } else {
-            super.manageBooks();
-        }
-    }
 }
