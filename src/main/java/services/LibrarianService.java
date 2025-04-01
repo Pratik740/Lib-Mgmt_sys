@@ -3,6 +3,7 @@ package services;
 import db.DatabaseManager;
 import models.Librarian;
 
+import javax.xml.crypto.Data;
 import java.sql.*;
 
 public class LibrarianService {
@@ -136,12 +137,37 @@ public class LibrarianService {
 
     }
 
-
-
-    public static void guestDetails(){
-        String allGuests = "select * from guests";
+    public void provideApprovals(Librarian librarian) {
+        String auditLog = "insert into audit_log(staff_id, action) values(?,?)";
+        String pendingRequests = """
+                    UPDATE book_requests
+                    SET status = 'Approved'
+                    WHERE status = 'pending';
+                   """;
         try(Connection conn = DatabaseManager.getConnection();
-        PreparedStatement stmt = conn.prepareStatement(allGuests)){
+        PreparedStatement stmt = conn.prepareStatement(pendingRequests);
+        PreparedStatement stmt1 = conn.prepareStatement(auditLog)) {
+            stmt.executeUpdate();
+            System.out.println("All pending requests have been approved.");
+            stmt1.setInt(1, librarian.getId());
+            stmt1.setString(2, "All current pending requests had been Approved");
+            stmt1.executeUpdate();
+        }
+        catch (SQLException e) {
+            System.err.println("Error encountered while providing approvals: " + e.getMessage());
+        }
+    }
+
+
+
+    public static void guestDetails(Librarian librarian) {
+        String allGuests = "select * from guests";
+
+        String auditLog = "insert into audit_log(staff_id, action) values(?,?)";
+
+        try(Connection conn = DatabaseManager.getConnection();
+        PreparedStatement stmt = conn.prepareStatement(allGuests);
+        PreparedStatement auditStmt = conn.prepareStatement(auditLog)) {
             ResultSet rs = stmt.executeQuery();
             System.out.println("+----+----------------+----------------+-----------------+---------------------+");
             System.out.println("| ID | Name           | Contact        | Visit Time      |");
@@ -157,6 +183,9 @@ public class LibrarianService {
 
             System.out.println("+----+----------------+----------------+-----------------+---------------------+");
 
+        auditStmt.setInt(1, librarian.getId());
+        auditStmt.setString(2, "Librarian " + librarian.getName() + "viewed all guests.");
+        auditStmt.executeUpdate();
         }
         catch (SQLException e) {
             System.err.println("Error encountered while guest details: " + e.getMessage());
@@ -210,6 +239,7 @@ public class LibrarianService {
 
             auditStmt.setInt(1, librarian.getId());
             auditStmt.setString(2, "Librarian " + librarian.getName() + "viewed the book reading details of each guest.");
+            auditStmt.executeUpdate();
 
         } catch (SQLException e) {
             System.err.println("Error encountered while trying to view guest book details: " + e.getMessage());
