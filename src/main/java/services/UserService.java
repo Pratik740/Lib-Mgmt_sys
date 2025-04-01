@@ -23,6 +23,8 @@ public class UserService extends PersonService{
 
             return loginUser(name, email);
 
+        } catch (SQLIntegrityConstraintViolationException e) {
+            System.err.println("Enter an unique email address, current one already exists!");
         } catch (SQLException e) {
             System.err.println("User registration failed: " + e.getMessage());
             e.printStackTrace();
@@ -237,33 +239,54 @@ public class UserService extends PersonService{
         }
 
         String fineCount = "select count(*) as count from fines where user_id = ?";
-        String overdueRejection = "insert into book_requests(user_id, book_id, book_copy_id, request_date, status) values(?, ?, ?, current_date, ?)";
+        String insertionQuery = "insert into book_requests(user_id, book_id, book_copy_id, request_date, status) values(?, ?, ?, current_date, ?)";
+        String copyIdFinder = "select copy_number from book_copies where book_id = ? AND available = true ";
+        String reservationInsert = "insert into reservations(user_id,book_id,request_date,expected_availability) values(?,?,current_date,?) ";
+        String oldestTransaction = "select ";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement stmt1 = conn.prepareStatement(fineCount);
-             PreparedStatement stmt2 = conn.prepareStatement(overdueRejection)) {
+             PreparedStatement stmt2 = conn.prepareStatement(insertionQuery);
+             PreparedStatement stmt3 = conn.prepareStatement(copyIdFinder);
+             PreparedStatement stmt4 = conn.prepareStatement(reservationInsert);
+             PreparedStatement stmt5 = conn.prepareStatement(oldestTransaction)) {
 
             stmt1.setInt(1, user.getId());
-            ResultSet rs = stmt1.executeQuery();
-            if (rs.next()) {
-                if (rs.getInt("count") > 3) {
+            ResultSet rs1 = stmt1.executeQuery();
+            if (rs1.next()) {
+                if (rs1.getInt("count") > 3) {
                     System.out.println("Cannot request book as user has more than 3 pending fines!.");
                     stmt2.setInt(1, user.getId());
                     stmt2.setInt(2, bookId);
                     stmt2.setNull(3, Types.INTEGER);
                     stmt2.setString(4, "Rejected");
                     stmt2.executeUpdate();
-
-                }
-                else {
-                    System.out.println("Cannot request book as user has more than 3 pending fines!.");
-                    stmt2.setInt(1, user.getId());
-                    stmt2.setInt(2, bookId);
-                    stmt2.setNull(3, Types.INTEGER);
-                    stmt2.setString(4, "Pending");
-                    stmt2.executeUpdate();
+                    return true;
                 }
             }
+            stmt3.setInt(1, bookId);
+            ResultSet rs3 = stmt3.executeQuery();
+            if(rs3.next()){
+                System.out.println("Your request has been processed in the Book Requests!!!");
+                stmt2.setInt(1, user.getId());
+                stmt2.setInt(2, bookId);
+                stmt2.setInt(3, rs3.getInt("copy_number"));
+                stmt2.setString(4, "Pending");
+            }
+            else{
+                System.out.println("Oops!!! We are fresh out of that book copies.");
+
+
+
+
+            }
+
+
+
+
+
+
+
 
         } catch (SQLException e) {
             System.err.println("User not able to request book: " + e.getMessage());
