@@ -11,7 +11,7 @@ import java.time.temporal.ChronoUnit;
 public class UserService extends PersonService{
 
     // Register a new user
-    public User registerUser(String name, String email, String passwordHash) {
+    public static User registerUser(String name, String email, String passwordHash) {
         String query = "INSERT INTO users (name, email, password_hash, date_of_joining) VALUES (?, ?, ?, current_timestamp())";
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {
@@ -24,19 +24,23 @@ public class UserService extends PersonService{
             return loginUser(name, email);
 
         } catch (SQLException e) {
+            System.err.println("User registration failed: " + e.getMessage());
             e.printStackTrace();
             return null;
         }
     }
 
     // Authenticate user login
-    public User loginUser(String email, String passwordHash) {
+    public static User loginUser(String email, String passwordHash) {
         String query = "SELECT * FROM users WHERE email = ? AND password_hash = ?";
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {
             stmt.setString(1, email);
             stmt.setString(2, passwordHash);
             ResultSet rs = stmt.executeQuery();
+
+            FineService.populateFineTable();
+
             if (rs.next()) {
                 return new User(
                         rs.getInt("id"),
@@ -46,13 +50,22 @@ public class UserService extends PersonService{
                         rs.getDate("date_of_joining").toLocalDate()
                 );
             }
+            else {
+                System.out.println("User not found!");
+                return null;
+            }
+
+
         } catch (SQLException e) {
+            System.err.println("User login failed: " + e.getMessage());
             e.printStackTrace();
         }
         return null;
     }
 
-    public void addTransaction(User user) {
+
+    //This is needed to have a set of transactions from which fine computation is done.
+    public static void getListOfUnfulfilledTransactions(User user) {
         String query = "SELECT * FROM transactions WHERE user_id = ? AND return_date is null";
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query);) {
@@ -69,17 +82,21 @@ public class UserService extends PersonService{
             }
 
         } catch (SQLException e) {
+            System.err.println(" Failed to fetch the list of unfulfilled transactions: " + e.getMessage());
             e.printStackTrace();
         }
 
     }
 
-    public void addBorrowedBook(User user) {
-        String query = "SELECT b.id AS book_id, b.title, b.author, b.isbn, b.genre_id " +
-                "FROM transactions t " +
-                "JOIN book_copies bc ON t.book_copy_id = bc.id " +
-                "JOIN books b ON bc.book_id = b.id " +
-                "WHERE t.user_id = ? AND t.return_date IS NULL";
+
+    //Arraylist of borrowed books for a particular user
+    public static void getListOfBorrowedBooks(User user) {
+        String query = """
+                       select id, title, author, isbn, genre_id from
+                       (select b.book_id as book_id from book_copies b join transactions t on t.book_copy_id = b.id where t.user_id = ? and t.return_date is null)
+                       as a
+                       join books on a.book_id = books.id;
+                       """;
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {
@@ -101,7 +118,7 @@ public class UserService extends PersonService{
 
     }
 
-    public void returnBook(User user , int bookId) {
+    public static boolean returnBook(User user , int bookId) {
 
         user.removeBook(bookId);
 
@@ -127,15 +144,15 @@ public class UserService extends PersonService{
                                     """;
         String query = """
                        UPDATE transactions
-                       SET return_date = ?,
-                       fine_amount = 0
+                       SET return_date = now(),
+                       fine_amount = DATEDIFF(now(), due_date) * 10
                        WHERE id = ?;
                        """;
 
         String fineQuery = """
                            UPDATE fines
                            SET amount = ?, status = 'Paid'
-                           WHERE id = ?;
+                           WHERE user_id = ? and transaction_id = ?;
                            """;
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -156,65 +173,65 @@ public class UserService extends PersonService{
                 }
             }
 
-            stmt2.setDate(1, new Date(System.currentTimeMillis()));
-            stmt2.setInt(2, transactionId);
+            stmt2.setInt(1, transactionId);
             stmt2.executeUpdate();
 
             if (overdue) {
                 stmt3.setInt(1, (int) ChronoUnit.DAYS.between(LocalDate.now(), dueDate) * 10);
                 stmt3.setInt(2, user.getId());
+                stmt3.setInt(3, transactionId);
+                stmt3.executeUpdate();
             }
+
+
 
         } catch (SQLException e) {
             e.printStackTrace();
+            return false;
         }
 
         user.UpdateTransaction(transactionId);
+        return true;
 
 
     }
 
 
-
-    // Delete user account
-    public boolean deleteUser(int userId) {
-        String checkBorrowedBooksQuery = "SELECT COUNT(*) FROM transactions WHERE user_id = ? AND return_date IS NULL";
-        String checkFinesQuery = "SELECT COUNT(*) FROM fines WHERE user_id = ? AND status = 'Pending'";
-
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement checkBorrowedStmt = conn.prepareStatement(checkBorrowedBooksQuery);
-             PreparedStatement checkFinesStmt = conn.prepareStatement(checkFinesQuery)) {
-
-            checkBorrowedStmt.setInt(1, userId);
-            checkFinesStmt.setInt(1, userId);
-
-            ResultSet rsBooks = checkBorrowedStmt.executeQuery();
-            ResultSet rsFines = checkFinesStmt.executeQuery();
-
-            if (rsBooks.next() && rsBooks.getInt(1) > 0) {
-                System.out.println("Cannot delete user: Books are still borrowed.");
-                return false;
-            }
-
-            if (rsFines.next() && rsFines.getInt(1) > 0) {
-                System.out.println("Cannot delete user: Pending fines exist.");
-                return false;
-            }
-
-            // Now delete user safely
-            String deleteUserQuery = "DELETE FROM users WHERE id = ?";
-            try (PreparedStatement deleteStmt = conn.prepareStatement(deleteUserQuery)) {
-                deleteStmt.setInt(1, userId);
-                return deleteStmt.executeUpdate() > 0;
-            }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
+    //Deletes any user
+    public static boolean deleteUser(User user) {
+        if (user.getBooks_borrowed().size() > 0) {
+            System.out.println("Cannot delete user: Books are still borrowed.");
+            return false;
         }
-        return false;
+
+        if (FineService.pendingFines(user)) {
+            System.out.println("Cannot delete user: Fines are still pending.");
+            return false;
+        }
+
+        String delQuery = "delete from users where id = ?";
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(delQuery)) {
+
+            if (stmt.executeUpdate() > 0) {
+                return true;
+            }
+            else {
+                return false;
+            }
+        } catch (SQLException e) {
+            System.out.println("Cannot delete user: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
     }
 
-    public boolean requestBook(int userId, int bookId) {
+
+    public boolean requestBook(User user , int bookId) {
+        return true;
+    }
+
+    public boolean requestBookRef(int userId, int bookId) {
         if (hasActiveLoan(userId, bookId)) {
             System.out.println("You already have this book borrowed. Return it first.");
             return false;
@@ -279,10 +296,10 @@ public class UserService extends PersonService{
     public boolean returnBook(int userId, int bookId) {
         checkAndApplyFine(userId, bookId);
         String query = """
-        UPDATE transactions 
+        UPDATE transactions
         SET return_date = CURDATE()
-        WHERE user_id = ? 
-        AND book_copy_id IN (SELECT id FROM book_copies WHERE book_id = ?) 
+        WHERE user_id = ?
+        AND book_copy_id IN (SELECT id FROM book_copies WHERE book_id = ?)
         AND return_date IS NULL
     """;
 

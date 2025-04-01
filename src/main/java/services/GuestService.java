@@ -1,16 +1,16 @@
 package services;
 
+import java.sql.*;
+import java.util.ArrayList;
+
 import db.DatabaseManager;
 import models.Book;
 import models.Guest;
-import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
 
 public class GuestService extends PersonService{
 
     // Start a guest session
-    public Guest guestLogin(String name, String contact) {
+    public static Guest guestLogin(String name, String contact) {
         String query = "INSERT INTO guests (name, contact) VALUES (?, ?)";
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
@@ -29,6 +29,7 @@ public class GuestService extends PersonService{
         } catch (SQLIntegrityConstraintViolationException e) {
             System.out.println("Guest with this contact already exists.");
         } catch (SQLException e) {
+            System.err.println("Some error occurred while trying to insert a guest.");
             e.printStackTrace();
         }
         return null;
@@ -36,7 +37,7 @@ public class GuestService extends PersonService{
 
 
     //Guest starts reading a book
-    public void startReading(Guest guest, int bookID) {
+    public static void startReading(Guest guest, int bookID) {
         int guestId = guest.getId();
         String query = "INSERT INTO guest_book_usage (guest_id, book_id, start_time) VALUES (?, ?, CURRENT_TIMESTAMP)";
         String book_find = "SELECT * FROM books WHERE books.id = ?";
@@ -61,12 +62,13 @@ public class GuestService extends PersonService{
 
             guest.addBook(to_add);
         } catch (SQLException e) {
+            System.err.println("Some error occurred while trying to start reading a new book.");
             e.printStackTrace();
         }
     }
 
     // Guest returns a book
-    public boolean returnBook(Guest guest, int bookId) {
+    public static boolean returnBook(Guest guest, int bookId) {
 
         int guestId = guest.getId();
 
@@ -80,12 +82,22 @@ public class GuestService extends PersonService{
             return stmt.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();
+            System.err.println("Book could not be returned. Error: " + e.getMessage());
             return false;
         }
     }
 
-    public void logoutGuest(int guestId) {
-        double fine = calculateFine(guestId);
+    public static void logoutGuest(Guest guest) {
+        int guestId = guest.getId();
+
+        //Return all presently reading books as on logout all books would be auto submitted to the librarian
+        ArrayList<Book> temp = guest.getCurrently_reading_books();
+        for (Book book : temp) {
+            returnBook(guest, book.getId());
+        }
+        temp.clear();
+
+        double fine = calculateFine(guestId); //
 
         String query = "DELETE FROM guests WHERE id = ?";
         try (Connection conn = DatabaseManager.getConnection();
@@ -98,12 +110,13 @@ public class GuestService extends PersonService{
                 System.out.println("Guest not found.");
             }
         } catch (SQLException e) {
+            System.err.println("Logout not successful. Error: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
 
-    public double calculateFine(int guestId) {
+    public static double calculateFine(int guestId) {
         String query = """
         SELECT SUM(fine_amt) AS total_fine
         FROM guest_book_usage WHERE guest_id = ?
@@ -116,6 +129,7 @@ public class GuestService extends PersonService{
                 return rs.getDouble("total_fine");
             }
         } catch (SQLException e) {
+            System.err.println("Fine calculation failed. Error: " + e.getMessage());
             e.printStackTrace();
         }
         return 0.0;

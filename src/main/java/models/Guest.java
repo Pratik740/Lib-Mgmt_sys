@@ -47,4 +47,6 @@ public class Guest {
             i += 1;
         }
     }
+
+    public ArrayList<Book> getCurrently_reading_books() { return currently_reading_books; }
 }

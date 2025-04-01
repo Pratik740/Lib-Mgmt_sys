@@ -76,7 +76,5 @@ public class User extends Person {
         }
     }
 
-    //User selects book_copy_id to
-    //public int helper1()
-
+    public ArrayList<Book> getBooks_borrowed() { return books_borrowed; }
 }
