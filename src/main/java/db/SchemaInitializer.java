@@ -118,10 +118,12 @@ public class SchemaInitializer {
                         id INT AUTO_INCREMENT PRIMARY KEY,
                         user_id INT NOT NULL,
                         book_id INT NOT NULL,
+                        book_copy_id INT,
                         request_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         status ENUM('Pending', 'Approved', 'Rejected') DEFAULT 'Pending',
                         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-                        FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
+                        FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE,
+                        FOREIGN KEY (book_copy_id) REFERENCES book_copies(id) ON DELETE CASCADE
                     );
             """;
             stmt.execute(createBookRequestsTable);

@@ -199,14 +199,14 @@ public class UserService extends PersonService{
 
     //Deletes any user
     public static boolean deleteUser(User user) {
-        if (user.getBooks_borrowed().size() > 0) {
+        if (!user.getBooks_borrowed().isEmpty()) {
             System.out.println("Cannot delete user: Books are still borrowed.");
-            return false;
+            return true;
         }
 
         if (FineService.pendingFines(user)) {
             System.out.println("Cannot delete user: Fines are still pending.");
-            return false;
+            return true;
         }
 
         String delQuery = "delete from users where id = ?";
@@ -228,6 +228,47 @@ public class UserService extends PersonService{
 
 
     public boolean requestBook(User user , int bookId) {
+
+        for (Book book : user.getBooks_borrowed()) {
+            if (book.getId() == bookId) {
+                System.out.println("Cannot request book as user posses a copy already!.");
+                return true;
+            }
+        }
+
+        String fineCount = "select count(*) as count from fines where user_id = ?";
+        String overdueRejection = "insert into book_requests(user_id, book_id, book_copy_id, request_date, status) values(?, ?, ?, current_date, ?)";
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement stmt1 = conn.prepareStatement(fineCount);
+             PreparedStatement stmt2 = conn.prepareStatement(overdueRejection)) {
+
+            stmt1.setInt(1, user.getId());
+            ResultSet rs = stmt1.executeQuery();
+            if (rs.next()) {
+                if (rs.getInt("count") > 3) {
+                    System.out.println("Cannot request book as user has more than 3 pending fines!.");
+                    stmt2.setInt(1, user.getId());
+                    stmt2.setInt(2, bookId);
+                    stmt2.setNull(3, Types.INTEGER);
+                    stmt2.setString(4, "Rejected");
+                    stmt2.executeUpdate();
+
+                }
+                else {
+                    System.out.println("Cannot request book as user has more than 3 pending fines!.");
+                    stmt2.setInt(1, user.getId());
+                    stmt2.setInt(2, bookId);
+                    stmt2.setNull(3, Types.INTEGER);
+                    stmt2.setString(4, "Pending");
+                    stmt2.executeUpdate();
+                }
+            }
+
+        } catch (SQLException e) {
+            System.err.println("User not able to request book: " + e.getMessage());
+            e.printStackTrace();
+        }
         return true;
     }
 
