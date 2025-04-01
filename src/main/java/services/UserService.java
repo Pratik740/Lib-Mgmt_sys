@@ -8,7 +8,7 @@ import java.sql.*;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 
-public class UserService extends PersonService{
+public class UserService extends PersonService {
 
     // Register a new user
     public static User registerUser(String name, String email, String passwordHash) {
@@ -25,6 +25,7 @@ public class UserService extends PersonService{
 
         } catch (SQLIntegrityConstraintViolationException e) {
             System.err.println("Enter an unique email address, current one already exists!");
+            return null;
         } catch (SQLException e) {
             System.err.println("User registration failed: " + e.getMessage());
             e.printStackTrace();
@@ -51,8 +52,7 @@ public class UserService extends PersonService{
                         rs.getString("password_hash"),
                         rs.getDate("date_of_joining").toLocalDate()
                 );
-            }
-            else {
+            } else {
                 System.out.println("User not found!");
                 return null;
             }
@@ -73,14 +73,14 @@ public class UserService extends PersonService{
              PreparedStatement stmt = conn.prepareStatement(query);) {
             stmt.setInt(1, user.getId());
             ResultSet rs = stmt.executeQuery();
-            while(rs.next()) {
+            while (rs.next()) {
                 user.SetTransaction(new Transaction(rs.getInt("id"),
-                                                    rs.getInt("user_id"),
-                                                    rs.getInt("book_copy_id"),
-                                                    rs.getDate("issue_date").toLocalDate(),
-                                                    rs.getDate("due_date").toLocalDate(),
-                                                    null,
-                                                    LocalDate.now().isAfter(rs.getDate("due_date").toLocalDate()) ? ((int) ChronoUnit.DAYS.between(rs.getDate("due_date").toLocalDate(), LocalDate.now())*10): 0));
+                        rs.getInt("user_id"),
+                        rs.getInt("book_copy_id"),
+                        rs.getDate("issue_date").toLocalDate(),
+                        rs.getDate("due_date").toLocalDate(),
+                        null,
+                        LocalDate.now().isAfter(rs.getDate("due_date").toLocalDate()) ? ((int) ChronoUnit.DAYS.between(rs.getDate("due_date").toLocalDate(), LocalDate.now()) * 10) : 0));
             }
 
         } catch (SQLException e) {
@@ -94,7 +94,8 @@ public class UserService extends PersonService{
     //Arraylist of borrowed books for a particular user
     public static void getListOfBorrowedBooks(User user) {
         String query = """
-                       select id, title, author, isbn, genre_id from
+                       
+                select id, title, author, isbn, genre_id from
                        (select b.book_id as book_id from book_copies b join transactions t on t.book_copy_id = b.id where t.user_id = ? and t.return_date is null)
                        as a
                        join books on a.book_id = books.id;
@@ -129,8 +130,8 @@ public class UserService extends PersonService{
         boolean overdue = false;
         LocalDate dueDate = null;
 
-        String transactionFinder = """
-                                        SELECT a.book_id, a.title, a.author, a.isbn, a.genre_id,
+        String transactionFinder =""" 
+                                       SELECT a.book_id, a.title, a.author, a.isbn, a.genre_id,
                                                a.copy_number, a.available,
                                                t.id AS transaction_id, t.user_id, t.issue_date, t.due_date,
                                                t.return_date, t.fine_amount
@@ -142,12 +143,14 @@ public class UserService extends PersonService{
                                                  WHERE books.id = ?
                                              ) AS a
                                                  JOIN transactions t ON a.copy_id = t.book_copy_id WHERE t.user_id = ?;
-                                        
-                                    """;
+                          """;
         String query = """
-                       UPDATE transactions
+                       
+                UPDATE
+                transactions
                        SET return_date = now(),
-                       fine_amount = DATEDIFF(now(), due_date) * 10
+                       fine_amount = DATEDIFF(
+                now(), due_date) * 10
                        WHERE id = ?;
                        """;
 
@@ -175,7 +178,10 @@ public class UserService extends PersonService{
                 }
             }
 
-            stmt2.setInt(1, transactionId);
+            stmt2.
+
+
+                    setInt(1, transactionId);
             stmt2.executeUpdate();
 
             if (overdue) {
@@ -207,7 +213,7 @@ public class UserService extends PersonService{
         }
 
         if (FineService.pendingFines(user)) {
-            System.out.println("Cannot delete user: Fines are still pending.");
+            System.out.println("Cannot delete u e still pending.");
             return true;
         }
 
@@ -242,7 +248,7 @@ public class UserService extends PersonService{
         String insertionQuery = "insert into book_requests(user_id, book_id, book_copy_id, request_date, status) values(?, ?, ?, current_date, ?)";
         String copyIdFinder = "select copy_number from book_copies where book_id = ? AND available = true ";
         String reservationInsert = "insert into reservations(user_id,book_id,request_date,expected_availability) values(?,?,current_date,?) ";
-        String oldestTransaction = "select ";
+        String oldestTransaction = "select due_date from book_copies as b INNER JOIN transactions as t ON b.id = t.book_copy_id WHERE b.book_id = ? ORDER BY due_date ASC LIMIT 1";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement stmt1 = conn.prepareStatement(fineCount);
@@ -266,28 +272,24 @@ public class UserService extends PersonService{
             }
             stmt3.setInt(1, bookId);
             ResultSet rs3 = stmt3.executeQuery();
+            stmt5.setInt(1, bookId);
+            ResultSet rs5 = stmt5.executeQuery();
             if(rs3.next()){
                 System.out.println("Your request has been processed in the Book Requests!!!");
                 stmt2.setInt(1, user.getId());
                 stmt2.setInt(2, bookId);
-                stmt2.setInt(3, rs3.getInt("copy_number"));
+                stmt2.setInt(3, rs3.getInt("copy_number" ));
                 stmt2.setString(4, "Pending");
+                stmt2.executeUpdate();
             }
             else{
                 System.out.println("Oops!!! We are fresh out of that book copies.");
-
-
-
-
+                rs5.next();
+                stmt4.setInt(1,user.getId());
+                stmt4.setInt(2,bookId);
+                stmt4.setDate(3,rs5.getDate("due_date"));
+                stmt4.executeUpdate();
             }
-
-
-
-
-
-
-
-
         } catch (SQLException e) {
             System.err.println("User not able to request book: " + e.getMessage());
             e.printStackTrace();
@@ -295,223 +297,101 @@ public class UserService extends PersonService{
         return true;
     }
 
-    public boolean requestBookRef(int userId, int bookId) {
-        if (hasActiveLoan(userId, bookId)) {
-            System.out.println("You already have this book borrowed. Return it first.");
-            return false;
-        }
 
-        if (!isBookAvailable(bookId)) {
-            System.out.println("No available copies for this book. Reserve it instead.");
-            return false;
-        }
 
-        String query = "INSERT INTO book_requests (user_id, book_id, status) VALUES (?, ?, 'Pending')";
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(query)) {
-            stmt.setInt(1, userId);
-            stmt.setInt(2, bookId);
-            return stmt.executeUpdate() > 0;
-        } catch (SQLException e) {
+    public void viewBookRequests(User user){
+        String fromBookRequest = "select * from book_requests where user_id = ?";
+        String fromReservations = "select * from reservations where user_id = ?";
+        try(Connection conn = DatabaseManager.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(fromBookRequest);
+            PreparedStatement stmt1 = conn.prepareStatement(fromReservations)){
+            stmt.setInt(1, user.getId());
+            ResultSet rs = stmt.executeQuery();
+            System.out.println("Book Requests waiting for approvals : ");
+            System.out.printf("%-5s %-10s %-15s %-10s%n", "ID", "Book ID", "Request Date", "Status");
+            System.out.println("--------------------------------------------------");
+            while(rs.next()){
+                System.out.printf("%-5d %-10d %-15s %-10s%n",
+                        rs.getInt("id"),
+                        rs.getInt("book_id"),
+                        rs.getDate("request_date"),
+                        rs.getString("status"));
+            }
+            stmt1.setInt(1, user.getId());
+            ResultSet rs1 = stmt1.executeQuery();
+            if(rs1.next()){
+                System.out.println("Books that have been reserved by others :");
+                System.out.printf("%-5s %-10s %-25s%n", "ID", "Book ID", "Expected Availability");
+                System.out.println("--------------------------------------------------");
+                do{
+                    System.out.printf("%-5d %-10d %-25s%n",
+                            rs1.getInt("id"),
+                            rs1.getInt("book_id"),
+                            rs1.getDate("expected_availability")
+                    );
+                }while(rs1.next());
+            }
+
+        }
+        catch (SQLException e) {
             e.printStackTrace();
         }
-        return false;
     }
 
-    public boolean handleReservations(int userId, int bookId) {
-        if (isBookAvailable(bookId)) {
-            System.out.println("Book is available. No need for a reservation.");
-            return false;
-        }
-
-        String dueDateQuery = """
-        SELECT MIN(due_date) FROM transactions 
-        WHERE book_copy_id IN (SELECT id FROM book_copies WHERE book_id = ?) 
-        AND return_date IS NULL
-        """;
-
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(dueDateQuery)) {
-            stmt.setInt(1, bookId);
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next() && rs.getDate(1) != null) {
-                Date estimatedAvailable = rs.getDate(1); // Latest due date
-
-                String insertQuery = """
-                INSERT INTO reservations (user_id, book_id, expected_availability) VALUES (?, ?, ?)
-                """;
-                try (PreparedStatement insertStmt = conn.prepareStatement(insertQuery)) {
-                    insertStmt.setInt(1, userId);
-                    insertStmt.setInt(2, bookId);
-                    insertStmt.setDate(3, estimatedAvailable);
-                    return insertStmt.executeUpdate() > 0;
-                }
+    public void CancelBookRequest(User user, int requestId){
+        String delRequest = "delete from book_requests where user_id = ? AND id = ?";
+        try(Connection conn = DatabaseManager.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(delRequest)){
+            stmt.setInt(1, user.getId());
+            stmt.setInt(2, requestId);
+            int rowsAffected = stmt.executeUpdate(); // Check how many rows were deleted
+            if (rowsAffected > 0) {
+                System.out.println("Book request with ID " + requestId + " has been successfully cancelled.");
             } else {
-                System.out.println("No active transactions found. Book availability unknown.");
+                System.out.println("No book request found with ID " + requestId + " for this user.");
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
         }
-        return false;
-    }
-
-
-    // Return a book
-    public boolean returnBook(int userId, int bookId) {
-        checkAndApplyFine(userId, bookId);
-        String query = """
-        UPDATE transactions
-        SET return_date = CURDATE()
-        WHERE user_id = ?
-        AND book_copy_id IN (SELECT id FROM book_copies WHERE book_id = ?)
-        AND return_date IS NULL
-    """;
-
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(query)) {
-            stmt.setInt(1, userId);
-            stmt.setInt(2, bookId);
-            if (stmt.executeUpdate() > 0) {
-                markBookAsAvailable(bookId);
-                return true;
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return false;
-    }
-
-    // Helper Methods
-    private boolean isBookAvailable(int bookId) {
-        String query = "SELECT COUNT(*) FROM book_copies WHERE book_id = ? AND available = TRUE";
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(query)) {
-            stmt.setInt(1, bookId);
-            ResultSet rs = stmt.executeQuery();
-            return rs.next() && rs.getInt(1) > 0;
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return false;
-    }
-
-    private boolean hasActiveLoan(int userId, int bookId) {
-        String query = """
-        SELECT COUNT(*) FROM transactions 
-        WHERE user_id = ? AND book_copy_id IN 
-        (SELECT id FROM book_copies WHERE book_id = ?) 
-        AND return_date IS NULL
-    """;
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(query)) {
-            stmt.setInt(1, userId);
-            stmt.setInt(2, bookId);
-            ResultSet rs = stmt.executeQuery();
-            return rs.next() && rs.getInt(1) > 0;
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return false;
-    }
-
-    private void checkAndApplyFine(int userId, int bookId) {
-        String fineQuery = """
-        INSERT INTO fines (user_id, transaction_id, amount, status)
-        SELECT ?, id, 10.00 * DATEDIFF(CURDATE(), due_date), 'Pending'
-        FROM transactions WHERE user_id = ? AND book_copy_id IN 
-        (SELECT id FROM book_copies WHERE book_id = ?) 
-        AND return_date IS NULL AND CURDATE() > due_date
-    """;
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(fineQuery)) {
-            stmt.setInt(1, userId);
-            stmt.setInt(2, userId);
-            stmt.setInt(3, bookId);
-            stmt.executeUpdate();
-        } catch (SQLException e) {
+        catch(SQLException e){
             e.printStackTrace();
         }
     }
 
-    private void markBookAsAvailable(int bookId) throws SQLException {
-        String updateQuery = "UPDATE book_copies SET available = TRUE WHERE book_id = ? AND available = FALSE LIMIT 1";
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(updateQuery)) {
-            stmt.setInt(1, bookId);
-            stmt.executeUpdate();
+    public void CancelReservationRequest(User user, int requestId){
+        String delRequest = "delete from reservations where user_id = ? AND id = ?";
+        try(Connection conn = DatabaseManager.getConnection();
+        PreparedStatement stmt = conn.prepareStatement(delRequest)){
+            stmt.setInt(1, user.getId());
+            stmt.setInt(2,requestId);
+            int rowsAffected = stmt.executeUpdate();
+            if (rowsAffected > 0) {
+                System.out.println("Book request with ID " + requestId + " has been successfully removed from the reservations.");
+            } else {
+                System.out.println("No book request found with ID " + requestId + " for this user.");
+            }
         }
-    }
-
-
-    public void printUserBorrowedBooks(int userId) {
-        String query = """
-        SELECT DISTINCT b.title
-        FROM transactions t
-        JOIN book_copies bc ON t.book_copy_id = bc.id
-        JOIN books b ON bc.book_id = b.id
-        WHERE t.user_id = ? AND t.return_date IS NULL
-        ORDER BY t.due_date ASC
-    """;
-
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(query)) {
-
-            stmt.setInt(1, userId);
-            ResultSet rs = stmt.executeQuery();
-
-            System.out.println("Books currently borrowed by user ID " + userId + ":");
-
-            boolean hasBooks = false;
-            while (rs.next()) {
-                hasBooks = true;
-                System.out.println("- " + rs.getString("title"));
-            }
-
-            if (!hasBooks) {
-                System.out.println("No books borrowed.");
-            }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void printUserFines(int userId) {
-        String query = """
-        SELECT b.title, f.amount, f.status
-        FROM fines f
-        JOIN transactions t ON f.transaction_id = t.id
-        JOIN book_copies bc ON t.book_copy_id = bc.id
-        JOIN books b ON bc.book_id = b.id
-        WHERE f.user_id = ?
-        ORDER BY f.status ASC, f.amount DESC
-    """;
-
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(query)) {
-
-            stmt.setInt(1, userId);
-            ResultSet rs = stmt.executeQuery();
-
-            System.out.println("Fines accumulated by user ID " + userId + ":");
-
-            boolean hasFines = false;
-            while (rs.next()) {
-                hasFines = true;
-                String bookTitle = rs.getString("title");
-                double fineAmount = rs.getDouble("amount");
-                String status = rs.getString("status");
-
-                System.out.println("- Book: " + bookTitle + " | Fine: ₹" + fineAmount + " | Status: " + status);
-            }
-
-            if (!hasFines) {
-                System.out.println("No fines recorded.");
-            }
-
-        } catch (SQLException e) {
+        catch(SQLException e){
             e.printStackTrace();
         }
     }
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
