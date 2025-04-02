@@ -25,7 +25,7 @@ public class LibraryCLI {
     public static void Guest(){
         Scanner sc = new Scanner(System.in);
         System.out.println("Please authenticate yourself by logging in :");
-        System.out.println("Please enter your name :");
+        System.out.println("Please enter your name : ");
         String name = sc.nextLine();
         System.out.println("Please enter your contact number :");
         String contactNo = sc.nextLine();
@@ -34,25 +34,23 @@ public class LibraryCLI {
         do{
             System.out.println("Guest Menu:");
             System.out.println("1.View Books 2.Return Book 3.LogOut Guest");
-            choice = sc.nextInt();
+            choice = Integer.parseInt(sc.nextLine());
             switch (choice) {
                 case 1:
                     System.out.println("1.View Books by genre");
                     PersonService.viewGenres();
                     String genreName = sc.nextLine();
+                    System.out.println(genreName);
                     PersonService.viewBooksByGenre(genreName);
                     System.out.println("Enter book Id of the book you wish to read");
-                    int bookId = sc.nextInt();
+                    int bookId = Integer.parseInt(sc.nextLine());
                     GuestService.startReading(guest,bookId);
                     break;
                 case 2:
                     System.out.println("All the books owed by you is as follows:");
-                    for(Book temp : guest.getCurrently_reading_books()){
-                        System.out.println(temp);
-                    }
                     System.out.println("Enter book Id of the book you wish to return");
                     guest.displayBooks();
-                    int bookID = sc.nextInt();
+                    int bookID = Integer.parseInt(sc.nextLine());
                     GuestService.returnBook(guest,bookID);
                     break;
                 case 3:
@@ -67,7 +65,7 @@ public class LibraryCLI {
     public static void SubscriptionUser(){
     }
 
-    public static void cliMaster(String[] args) {
+    public static void cliMaster() {
         System.out.println("Welcome to Library CLI");
         Scanner scanner = new Scanner(System.in);
         int choice = 0 ;

@@ -29,7 +29,7 @@ public class PersonService {
     // View available books by genre using Book model
     public static List<Book> getBooksByGenre(String genreName) {
         String query = """
-            SELECT b.id, b.title, b.author, b.isbn, b.genre_id
+            SELECT distinct b.id, b.title, b.author, b.isbn, b.genre_id
             FROM books b
             JOIN genres g ON b.genre_id = g.id
             JOIN book_copies bc ON b.id = bc.book_id
@@ -62,25 +62,7 @@ public class PersonService {
         List<Book> books = getBooksByGenre(genreName);
         System.out.printf("Available Books in Genre '%s':%n", genreName);
         for (Book book : books) {
-            System.out.printf("-%s. %s by %s (ISBN: %s)%n",book.getId(), book.getTitle(), book.getAuthor(), book.getIsbn());
-        }
-    }
-
-    public static void viewBooksByAuthor(String author) {
-        String query = "SELECT * FROM books WHERE author = ?";
-
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(query)) {
-
-            stmt.setString(1, author);
-            ResultSet rs = stmt.executeQuery();
-
-            System.out.printf("Available Books by '%s' : -%n", author);
-            while (rs.next()) {
-                System.out.println(rs.getInt("id") + rs.getString("title"));
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
+            System.out.printf("%s. %s by %s (ISBN: %s)%n",book.getId(), book.getTitle(), book.getAuthor(), book.getIsbn());
         }
     }
 

@@ -3,9 +3,7 @@ package utils;
 import db.DatabaseManager;
 import db.SchemaInitializer;
 
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 
 public class config {
     public static void preConfiguration() {
@@ -244,6 +242,30 @@ public class config {
 
         } catch (SQLException e) {
             System.err.println("An error occurred while populating the database. Error: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    public static void del() {
+
+        String DB_URL = "jdbc:mysql://localhost:3306/";
+        String USER = "root";
+        String PASSWORD = "Jayata_roy@5077";
+        String DATABASE_NAME = "library_db";
+
+        try (Connection conn = DriverManager.getConnection(DB_URL, USER, PASSWORD);
+             Statement stmt = conn.createStatement()) {
+
+            // Drop database if it exists
+            String dropDB = "DROP DATABASE IF EXISTS " + DATABASE_NAME;
+            stmt.executeUpdate(dropDB);
+
+            // Create a new database
+            String createDB = "CREATE DATABASE " + DATABASE_NAME;
+            stmt.executeUpdate(createDB);
+
+        } catch (SQLException e) {
+            System.err.println("An error occurred while deleting the database. Error: " + e.getMessage());
             e.printStackTrace();
         }
     }
