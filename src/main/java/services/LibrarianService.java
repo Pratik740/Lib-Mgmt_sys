@@ -10,7 +10,7 @@ import java.sql.*;
 public class LibrarianService {
     public static Librarian loginLibrarian(String email, String password) {
         String login = "select * from staff where email = ? and password_hash = ?";
-        String auditLogin = "insert into audit_log(staff_id, action) values(?,?)";
+        String auditLogin = "insert into audit_log(staff_id, action) values(?,?) ";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement stmt = conn.prepareStatement(login);
@@ -68,33 +68,12 @@ public class LibrarianService {
              PreparedStatement viewStmt = conn.prepareStatement(viewPending);
              PreparedStatement auditStmt = conn.prepareStatement(auditLog)) {
 
-             viewStmt.executeQuery();
-             ResultSet rs = viewStmt.executeQuery();
-
-            System.out.printf("%-5s | %-20s | %-25s | %-30s | %-12s | %-12s | %-7s%n",
-                    "ID", "Name", "Email", "Book Title", "Issue Date", "Due Date", "Fine");
-            System.out.println("-------------------------------------------------------------------------------------------------------------");
-
-            // Print table rows
-            while (rs.next()) {
-                System.out.printf("%-5d | %-20s | %-25s | %-30s | %-12s | %-12s | $%-6.2f%n",
-                        rs.getInt("user_id"),
-                        rs.getString("name"),
-                        rs.getString("email"),
-                        rs.getString("title"),
-                        rs.getDate("issue_date"),
-                        rs.getDate("due_date"),
-                        rs.getDouble("amount")
-                );
-            }
-
-            auditStmt.setInt(1, staff.getId());
-            auditStmt.setString(2, staff.getRole() + " " + staff.getName() + " viewed pending fine details of all users.");
         } catch (SQLException e) {
             System.err.println("Error encountered while viewing pending users: " + e.getMessage());
             e.printStackTrace();
         }
     }
+
 
     public static void viewAvailableBookCopies (Staff staff) {
         String availQuery = """
@@ -130,7 +109,7 @@ public class LibrarianService {
             System.out.println("+------+--------------------------------+----------------------+--------+");
 
             auditStmt.setInt(1, staff.getId());
-            auditStmt.setString(2, staff.getRole() + " " + staff.getName() + " viewed all available books and their copies.");
+            auditStmt.setString(2, staff.getRole() + " "  + staff.getName() + "viewed all available books and their copies.");
         } catch (SQLException e) {
             System.err.println("Error encountered while viewing available book copies: " + e.getMessage());
             e.printStackTrace();
@@ -239,7 +218,7 @@ public class LibrarianService {
             System.out.println("+----+----------------+-----------------------------+---------------------+---------------------+--------+");
 
             auditStmt.setInt(1, staff.getId());
-            auditStmt.setString(2, staff.getRole() + " " + staff.getName() + " viewed the book reading details of each guest.");
+            auditStmt.setString(2, staff.getRole() + " "  + staff.getName() + "viewed the book reading details of each guest.");
             auditStmt.executeUpdate();
 
         } catch (SQLException e) {
@@ -247,45 +226,147 @@ public class LibrarianService {
             e.printStackTrace();
         }
     }
-
-    public static void viewUserDetails(Staff staff) {
-        String userDetailsQuery = "SELECT users.id, users.name, users.email, users.date_of_joining FROM users";
-        String auditLog = "INSERT INTO audit_log(staff_id, action) VALUES(?, ?)";
-
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement userDetailsStmt = conn.prepareStatement(userDetailsQuery);
-             PreparedStatement auditStmt = conn.prepareStatement(auditLog)) {
-
-            // Execute the query to retrieve user details
-            ResultSet rs = userDetailsStmt.executeQuery();
-
-            // Print table header
-            System.out.println("+----+----------------+-------------------------+---------------------+");
-            System.out.println("| ID | Name           | Email                   | Date of Joining     |");
-            System.out.println("+----+----------------+-------------------------+---------------------+");
-
-            // Iterate through the result set and print each user's details
-            while (rs.next()) {
-                int id = rs.getInt("id");
-                String name = rs.getString("name");
-                String email = rs.getString("email");
-                Date dateOfJoining = rs.getDate("date_of_joining");
-
-                // Print each row of the user details
-                System.out.printf("| %-2d | %-14s | %-23s | %-19s |\n",
-                        id, name, email, dateOfJoining);
-            }
-
-            System.out.println("+----+----------------+-------------------------+---------------------+");
-
-            // Log the action in the audit log (log the librarian's action)
+    public void checkoutUser(Staff staff,int userId) {
+        String getUser = "select * from users where id = ?";
+        String auditLog = "insert into audit_log(staff_id, action) values(?,?)";
+        try(Connection conn = DatabaseManager.getConnection();
+        PreparedStatement stmt = conn.prepareStatement(getUser);
+        PreparedStatement auditStmt = conn.prepareStatement(auditLog)){
+            stmt.setInt(1, userId);
+            ResultSet rs = stmt.executeQuery();
+            System.out.println("Id : "+userId +
+                                " Name : "+rs.getString("name")+
+                                " Email : "+rs.getString("email")+
+                                " Date of Joining : "+rs.getDate("date_of_joining"));
             auditStmt.setInt(1, staff.getId());
-            auditStmt.setString(2, staff.getRole() + " " + staff.getName() + " viewed user details.");
+            auditStmt.setString(2,staff.getRole() + " " +staff.getName()+" viewed the details " +
+                    "of User "+rs.getString("name"));
             auditStmt.executeUpdate();
-
-        } catch (SQLException e) {
-            System.err.println("Error encountered when librarian tried to view user details: " + e.getMessage());
-            e.printStackTrace();
+        }
+        catch (SQLException e) {
+            System.err.println("Error encountered while trying to checkout user: " + e.getMessage());
         }
     }
+    // It will contain all the books that are overdue(Book is with him/her) by any user.
+    public void overdueBooksOfUser(Staff staff,int userId){
+            String getOverDue = """
+                    SELECT title,due_date,amount from
+                    fines as f INNER JOIN transactions as t ON f.transaction_id = t.id
+                    INNER JOIN book_copies as bc ON bc.id = t.book_copy_id 
+                    INNER JOIN books as b ON b.id = bc.book_id
+                    where f.user_id = ? AND f.status = 'Pending';
+                    """;
+            String auditLog = "insert into audit_log(staff_id, action) values(?,?)";
+            try(Connection conn = DatabaseManager.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(getOverDue);
+            PreparedStatement auditstmt = conn.prepareStatement(auditLog)){
+                stmt.setInt(1, userId);
+                ResultSet rs = stmt.executeQuery();
+                System.out.println("Overdue Books of User " + userId + " :");
+                System.out.println("+-------------------------------+------------+--------+");
+                System.out.println("| Title                         | Due Date   | Amount |");
+                System.out.println("+-------------------------------+------------+--------+");
+
+                while (rs.next()) {
+                    System.out.printf("| %-29s | %-10s | %-6d |\n",
+                            rs.getString("title"),
+                            rs.getDate("due_date"),
+                            rs.getInt("amount"));
+                }
+
+                System.out.println("+-------------------------------+------------+--------+");
+                auditstmt.setInt(1,staff.getId());
+                auditstmt.setString(2,staff.getRole() + " " +staff.getName()+" viewed the overdue books of User "+userId);
+                auditstmt.executeUpdate();
+            }
+            catch (SQLException e) {
+                System.err.println("Error encountered while trying to overdue books of user: " + e.getMessage());
+            }
+    }
+
+    public void returnedBooksOnCurrentDate(Staff staff) {
+        String returned = """
+                select title , amount , book_copy_id , user_id from fines as f
+                INNER JOIN transactions as t ON f.transaction_id = t.id
+                INNER JOIN book_copies as bc ON bc.id = t.book_copy_id
+                INNER JOIN books as b ON b.id = bc.book_id
+                where f.status = 'Paid' AND t.return_date = ?;                
+                """;
+        String auditLog = "insert into audit_log(staff_id, action) values(?,?)";
+        try(Connection conn = DatabaseManager.getConnection();
+        PreparedStatement stmt = conn.prepareStatement(returned);
+        PreparedStatement auditlog = conn.prepareStatement(auditLog)){
+            Date currentdate = new Date(System.currentTimeMillis());
+            stmt.setDate(1,currentdate );
+            ResultSet rs = stmt.executeQuery();
+            System.out.println("Returned Books on Current Date:");
+            System.out.println("+---------+-------------------------------+--------------+--------+");
+            System.out.println("| User ID | Title                         | Book Copy ID | Amount |");
+            System.out.println("+---------+-------------------------------+--------------+--------+");
+
+            while (rs.next()) {
+                System.out.printf("| %-7d | %-29s | %-12s | %-6s |\n",
+                        rs.getInt("user_id"),
+                        rs.getString("title"),
+                        rs.getString("book_copy_id"),
+                        rs.getString("amount"));
+            }
+            System.out.println("+---------+-------------------------------+--------------+--------+");
+
+            auditlog.setInt(1, staff.getId());
+            auditlog.setString(2,staff.getRole() + " " +staff.getName()+" viewed returned books on date : "+currentdate);
+            auditlog.executeUpdate();
+        }
+        catch (SQLException e) {
+            System.err.println("Error encountered while trying to view returned books : " + e.getMessage());
+        }
+    }
+
+    public void getMyProfile(Staff staff) {
+        System.out.println("+----------------------+-----+---------------------------+------------+-------------+------------+");
+        System.out.println("| Name                 | ID  | Email                     | Role       | Shift Start | Shift End  |");
+        System.out.println("+----------------------+-----+---------------------------+------------+-------------+------------+");
+
+        System.out.printf("| %-20s | %-3s | %-25s | %-10s | %-11s | %-10s |\n",
+                staff.getName(),
+                staff.getId(),
+                staff.getEmail(),
+                staff.getRole(),
+                staff.getShiftStart(),
+                staff.getShiftEnd());
+
+        System.out.println("+----------------------+-----+---------------------------+------------+-------------+------------+");
+    }
+
+    public void viewPendingApprovals(Staff staff) {
+        String requests = "Select * from book_requests where status = 'Pending'";
+        String auditLog = "insert into audit_log(staff_id, action) values(?,?)";
+        try(Connection conn = DatabaseManager.getConnection();
+        PreparedStatement stmt = conn.prepareStatement(requests);
+        PreparedStatement auditstmt = conn.prepareStatement(auditLog)){
+            stmt.executeQuery();
+            ResultSet rs = stmt.executeQuery();
+            System.out.println("All pending Approvals are as follows:");
+            System.out.println("+----+---------+---------+--------------+---------------------+");
+            System.out.println("| ID | User ID | Book ID | Book Copy ID | Request Date        |");
+            System.out.println("+----+---------+---------+--------------+---------------------+");
+
+            while (rs.next()) {
+                System.out.printf("| %-2d | %-7d | %-7d | %-12d | %-19s |\n",
+                        rs.getInt("id"),
+                        rs.getInt("user_id"),
+                        rs.getInt("book_id"),
+                        rs.getInt("book_copy_id"),
+                        rs.getTimestamp("request_date"));
+            }
+            System.out.println("+----+---------+---------+--------------+---------------------+");
+            auditstmt.setInt(1, staff.getId());
+            auditstmt.setString(2, staff.getRole() + " " +staff.getName()+" has viewed all pending approvals");
+            auditstmt.executeUpdate();
+        }
+        catch (SQLException e) {
+            System.err.println("Error encountered while trying to view Pending approvals : " + e.getMessage());
+        }
+    }
+
 }
