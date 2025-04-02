@@ -2,7 +2,7 @@ package services;
 
 import java.sql.*;
 
-import Schedulers.FineService;
+import Schedulers.*;
 import db.DatabaseManager;
 import models.Admin;
 
@@ -17,6 +17,7 @@ public class AdminService extends LibrarianService{
              PreparedStatement auditStmt = conn.prepareStatement(auditLog)) {
 
             FineService.populateFineTable();
+            ReservationService.reserveToReqPopulate();
 
             loginStmt.setString(1, email);
             loginStmt.setString(2, password);

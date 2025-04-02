@@ -1,10 +1,11 @@
 package services;
 
-import Schedulers.FineService;
+import Schedulers.*;
 import db.DatabaseManager;
 import models.Transaction;
 import models.User;
 import models.Book;
+
 import java.sql.*;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -44,6 +45,7 @@ public class UserService extends PersonService {
             ResultSet rs = stmt.executeQuery();
 
             FineService.populateFineTable();
+            ReservationService.reserveToReqPopulate();
 
             if (rs.next()) {
                 return new User(
@@ -245,7 +247,7 @@ public class UserService extends PersonService {
         String fineCount = "select count(*) as count from fines where user_id = ?";
         String reqInsertQuery = "insert into book_requests(user_id, book_id, book_copy_id, status) values(?, ?, ?, ?)";
         String copyIdFinder = "select copy_number from book_copies where book_id = ? AND available = true ";
-        String reservationInsert = "insert into reservations(user_id,book_id,request_date,expected_availability) values(?,?,current_date,?) ";
+        String reservationInsert = "insert into reservations(user_id,book_id,expected_availability) values(?,?,?) ";
         String oldestTransaction = "select due_date from book_copies as b INNER JOIN transactions as t ON b.id = t.book_copy_id WHERE b.book_id = ? ORDER BY due_date ASC LIMIT 1";
         String updateCopyAvailability = "update book_copies set available = false where id = ?";
 
@@ -351,10 +353,25 @@ public class UserService extends PersonService {
 
     public void CancelBookRequest(User user, int requestId){
         String delRequest = "delete from book_requests where user_id = ? AND id = ?";
-        String copyId = "select "
+        String copyId = "select book_copy_id from book_requests where user_id = ? and  id = ?";
+        String updateAvail = "update book_copies set available = true where id = ?";
+
         try(Connection conn = DatabaseManager.getConnection();
             PreparedStatement stmt = conn.prepareStatement(delRequest);
-            ){
+            PreparedStatement copyIdFinderStmt = conn.prepareStatement(copyId);
+            PreparedStatement deallocCopy = conn.prepareStatement(updateAvail)) {
+
+            copyIdFinderStmt.setInt(1, user.getId());
+            copyIdFinderStmt.setInt(2, requestId);
+
+            ResultSet rs = copyIdFinderStmt.executeQuery();
+
+            markBookAsAvailable(rs.getInt(1));
+
+            deallocCopy.setInt(1, rs.getInt(1));
+            deallocCopy.executeQuery();
+
+
             stmt.setInt(1, user.getId());
             stmt.setInt(2, requestId);
             int rowsAffected = stmt.executeUpdate(); // Check how many rows were deleted
@@ -382,6 +399,20 @@ public class UserService extends PersonService {
             }
         }
         catch(SQLException e){
+            e.printStackTrace();
+        }
+    }
+
+    public static void markBookAsAvailable(int bookCopyId) {
+        String updateQuery = "UPDATE book_copies SET available = true WHERE id = ?";
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(updateQuery)) {
+            stmt.setInt(1, bookCopyId);
+            stmt.executeUpdate();
+
+        } catch (SQLException e) {
+            System.err.println("Failed to update book availability: " + e.getMessage());
             e.printStackTrace();
         }
     }
