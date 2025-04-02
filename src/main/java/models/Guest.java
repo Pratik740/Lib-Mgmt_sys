@@ -22,7 +22,6 @@ public class Guest {
 
     public void displayBooks() {
         if (!this.currently_reading_books.isEmpty()) {
-
             System.out.println(this.name + " has the following books currently: -\n");
             for (Book book : this.currently_reading_books) {
                 System.out.println(book);
