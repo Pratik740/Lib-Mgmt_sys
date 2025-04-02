@@ -13,7 +13,6 @@ public class Staff extends Person {
         this.shiftStart = shiftStart;
         this.shiftEnd = shiftEnd;
     }
-
     public String getRole() { return role; }
     public LocalTime getShiftStart() { return shiftStart; }
     public LocalTime getShiftEnd() { return shiftEnd; }

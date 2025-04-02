@@ -5,7 +5,4 @@ public class Admin extends Staff {
         super(id, name, email, passwordHash, "Admin", null, null);
     }
 
-    public void hireLibrarian() {
-        System.out.println("Hiring a librarian...");
-    }
 }

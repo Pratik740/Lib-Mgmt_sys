@@ -1,9 +1,10 @@
 package services;
 
+import Schedulers.FineService;
 import db.DatabaseManager;
 import models.Librarian;
+import models.Staff;
 
-import javax.xml.crypto.Data;
 import java.sql.*;
 
 public class LibrarianService {
@@ -44,7 +45,7 @@ public class LibrarianService {
         }
     }
 
-    public static void viewPendingFineDetails (Librarian librarian) {
+    public static void viewPendingFineDetails (Staff staff) {
         String viewPending = """                
                              SELECT
                                  users.id AS user_id,
@@ -87,15 +88,15 @@ public class LibrarianService {
                 );
             }
 
-            auditStmt.setInt(1, librarian.getId());
-            auditStmt.setString(2, "Librarian " + librarian.getName() + "viewed pending fine details of all users.");
+            auditStmt.setInt(1, staff.getId());
+            auditStmt.setString(2, staff.getRole() + " " + staff.getName() + " viewed pending fine details of all users.");
         } catch (SQLException e) {
             System.err.println("Error encountered while viewing pending users: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
-    public static void viewAvailableBookCopies (Librarian librarian) {
+    public static void viewAvailableBookCopies (Staff staff) {
         String availQuery = """
                             SELECT books.id, books.title,books.author, COUNT(book_copies.id) AS total_copies
                             FROM books
@@ -128,8 +129,8 @@ public class LibrarianService {
 
             System.out.println("+------+--------------------------------+----------------------+--------+");
 
-            auditStmt.setInt(1, librarian.getId());
-            auditStmt.setString(2, "Librarian " + librarian.getName() + "viewed all available books and their copies.");
+            auditStmt.setInt(1, staff.getId());
+            auditStmt.setString(2, staff.getRole() + " " + staff.getName() + " viewed all available books and their copies.");
         } catch (SQLException e) {
             System.err.println("Error encountered while viewing available book copies: " + e.getMessage());
             e.printStackTrace();
@@ -137,7 +138,7 @@ public class LibrarianService {
 
     }
 
-    public void provideApprovals(Librarian librarian) {
+    public void provideApprovals(Staff staff) {
         String auditLog = "insert into audit_log(staff_id, action) values(?,?)";
         String pendingRequests = """
                     UPDATE book_requests
@@ -148,9 +149,9 @@ public class LibrarianService {
         PreparedStatement stmt = conn.prepareStatement(pendingRequests);
         PreparedStatement stmt1 = conn.prepareStatement(auditLog)) {
             stmt.executeUpdate();
-            System.out.println("All pending requests have been approved.");
-            stmt1.setInt(1, librarian.getId());
-            stmt1.setString(2, "All current pending requests had been Approved");
+            System.out.println("All pending book requests have been approved.");
+            stmt1.setInt(1, staff.getId());
+            stmt1.setString(2, staff.getRole() + " " + staff.getName() + " approved all pending book requests.");
             stmt1.executeUpdate();
         }
         catch (SQLException e) {
@@ -160,7 +161,7 @@ public class LibrarianService {
 
 
 
-    public static void guestDetails(Librarian librarian) {
+    public static void guestDetails(Staff staff) {
         String allGuests = "select * from guests";
 
         String auditLog = "insert into audit_log(staff_id, action) values(?,?)";
@@ -183,16 +184,16 @@ public class LibrarianService {
 
             System.out.println("+----+----------------+----------------+-----------------+---------------------+");
 
-        auditStmt.setInt(1, librarian.getId());
-        auditStmt.setString(2, "Librarian " + librarian.getName() + "viewed all guests.");
-        auditStmt.executeUpdate();
+            auditStmt.setInt(1, staff.getId());
+            auditStmt.setString(2, staff.getRole() + " " + staff.getName() + " viewed all guests' details.");
+            auditStmt.executeUpdate();
         }
         catch (SQLException e) {
             System.err.println("Error encountered while guest details: " + e.getMessage());
         }
     }
 
-    public static void guestBookDetails (Librarian librarian) {
+    public static void guestBookDetails (Staff staff) {
         String guestBookDetailsQuery = """
                                        SELECT
                                            guests.id,
@@ -237,12 +238,53 @@ public class LibrarianService {
 
             System.out.println("+----+----------------+-----------------------------+---------------------+---------------------+--------+");
 
-            auditStmt.setInt(1, librarian.getId());
-            auditStmt.setString(2, "Librarian " + librarian.getName() + "viewed the book reading details of each guest.");
+            auditStmt.setInt(1, staff.getId());
+            auditStmt.setString(2, staff.getRole() + " " + staff.getName() + " viewed the book reading details of each guest.");
             auditStmt.executeUpdate();
 
         } catch (SQLException e) {
             System.err.println("Error encountered while trying to view guest book details: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    public static void viewUserDetails(Staff staff) {
+        String userDetailsQuery = "SELECT users.id, users.name, users.email, users.date_of_joining FROM users";
+        String auditLog = "INSERT INTO audit_log(staff_id, action) VALUES(?, ?)";
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement userDetailsStmt = conn.prepareStatement(userDetailsQuery);
+             PreparedStatement auditStmt = conn.prepareStatement(auditLog)) {
+
+            // Execute the query to retrieve user details
+            ResultSet rs = userDetailsStmt.executeQuery();
+
+            // Print table header
+            System.out.println("+----+----------------+-------------------------+---------------------+");
+            System.out.println("| ID | Name           | Email                   | Date of Joining     |");
+            System.out.println("+----+----------------+-------------------------+---------------------+");
+
+            // Iterate through the result set and print each user's details
+            while (rs.next()) {
+                int id = rs.getInt("id");
+                String name = rs.getString("name");
+                String email = rs.getString("email");
+                Date dateOfJoining = rs.getDate("date_of_joining");
+
+                // Print each row of the user details
+                System.out.printf("| %-2d | %-14s | %-23s | %-19s |\n",
+                        id, name, email, dateOfJoining);
+            }
+
+            System.out.println("+----+----------------+-------------------------+---------------------+");
+
+            // Log the action in the audit log (log the librarian's action)
+            auditStmt.setInt(1, staff.getId());
+            auditStmt.setString(2, staff.getRole() + " " + staff.getName() + " viewed user details.");
+            auditStmt.executeUpdate();
+
+        } catch (SQLException e) {
+            System.err.println("Error encountered when librarian tried to view user details: " + e.getMessage());
             e.printStackTrace();
         }
     }
