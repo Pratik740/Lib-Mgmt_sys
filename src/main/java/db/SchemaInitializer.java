@@ -169,11 +169,24 @@ public class SchemaInitializer {
             """;
             stmt.execute(createAuditLogTable);
 
+            //12. Messages to show User on login
+            String createMessagesTable = """
+                CREATE TABLE IF NOT EXISTS messages (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NOT NULL,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    description VARCHAR(255) NOT NULL,
+                    readed BOOLEAN NOT NULL DEFAULT FALSE,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                );
+            """;
+            stmt.execute(createMessagesTable);
             conn.commit();
 
             System.out.println("Database schema initialized successfully!");
 
         } catch (SQLException e) {
+
             e.printStackTrace(); // Proper logging needed in production
         }
     }
