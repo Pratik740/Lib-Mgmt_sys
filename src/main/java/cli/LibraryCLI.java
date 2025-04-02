@@ -22,50 +22,98 @@ import models.Librarian;
 
 
 public class LibraryCLI {
-    public static void Guest(){
+
+
+    public static void Librarian() {
         Scanner sc = new Scanner(System.in);
-        System.out.println("Please authenticate yourself by logging in :");
-        System.out.println("Please enter your name :");
-        String name = sc.nextLine();
-        System.out.println("Please enter your contact number :");
-        String contactNo = sc.nextLine();
-        Guest guest = GuestService.guestLogin(name,contactNo);
-        int choice ;
-        do{
-            System.out.println("Guest Menu:");
-            System.out.println("1.View Books 2.Return Book 3.LogOut Guest");
+        Librarian librarian = null;
+
+        // Login
+        while (librarian == null) {
+            System.out.println("\n=== Librarian Login ===");
+            System.out.print("Enter email: ");
+            String email = sc.nextLine();
+            System.out.print("Enter password: ");
+            String password = sc.nextLine();
+            librarian = LibrarianService.loginLibrarian(email, password);
+        }
+
+        int choice;
+
+        do {
+            System.out.println("\n=== Librarian Menu ===");
+            System.out.println("1. View Pending Fines");
+            System.out.println("2. View Available Book Copies");
+            System.out.println("3. Approve Pending Requests");
+            System.out.println("4. View Guest Details");
+            System.out.println("5. View Guest Reading History");
+            System.out.println("6. Check User Overdue Books");
+            System.out.println("7. View Today's Returns");
+            System.out.println("8. View My Profile");
+            System.out.println("9. View Pending Approvals");
+            System.out.println("10. Logout");
+            System.out.print("Enter choice: ");
             choice = sc.nextInt();
+            sc.nextLine();  // Consume newline
+
             switch (choice) {
                 case 1:
-                    System.out.println("1.View Books by genre");
-                    PersonService.viewGenres();
-                    String genreName = sc.nextLine();
-                    PersonService.viewBooksByGenre(genreName);
-                    System.out.println("Enter book Id of the book you wish to read");
-                    int bookId = sc.nextInt();
-                    GuestService.startReading(guest,bookId);
+                    System.out.println("\n--- Pending Fines ---");
+                    LibrarianService.viewPendingFineDetails(librarian);
                     break;
+
                 case 2:
-                    System.out.println("All the books owed by you is as follows:");
-                    for(Book temp : guest.getCurrently_reading_books()){
-                        System.out.println(temp);
-                    }
-                    System.out.println("Enter book Id of the book you wish to return");
-                    guest.displayBooks();
-                    int bookID = sc.nextInt();
-                    GuestService.returnBook(guest,bookID);
+                    System.out.println("\n--- Available Books ---");
+                    LibrarianService.viewAvailableBookCopies(librarian);
                     break;
+
                 case 3:
-                    GuestService.logoutGuest(guest);
+                    System.out.println("\n--- Approve Requests ---");
+                    LibrarianService.provideApprovals(librarian);
                     break;
-                    default:break;
+
+                case 4:
+                    System.out.println("\n--- Guest Details ---");
+                    LibrarianService.guestDetails(librarian);
+                    break;
+
+                case 5:
+                    System.out.println("\n--- Guest Reading History ---");
+                    LibrarianService.guestBookDetails(librarian);
+                    break;
+
+                case 6:
+                    System.out.print("\nEnter User ID to check overdue books: ");
+                    int userId = sc.nextInt();
+                    LibrarianService.overdueBooksOfUser(librarian, userId);
+                    break;
+
+                case 7:
+                    System.out.println("\n--- Today's Returns ---");
+                    LibrarianService.returnedBooksOnCurrentDate(librarian);
+                    break;
+
+                case 8:
+                    System.out.println("\n--- My Profile ---");
+                    LibrarianService.getMyProfile(librarian);
+                    break;
+
+                case 9:
+                    System.out.println("\n--- Pending Approvals ---");
+                    LibrarianService.viewPendingApprovals(librarian);
+                    break;
+
+                case 10:
+                    System.out.println("Logging out...");
+                    break;
+
+                default:
+                    System.out.println("Invalid choice!");
             }
-
-        }while(choice != 3);
+        } while (choice != 10);
     }
 
-    public static void SubscriptionUser(){
-    }
+
 
     public static void cliMaster(String[] args) {
         System.out.println("Welcome to Library CLI");
@@ -76,6 +124,10 @@ public class LibraryCLI {
             System.out.println("1. Admin\n2. Librarian\n3. User\n4. Exit");
             choice = scanner.nextInt();
             switch(choice){
+                case 2:
+                    System.out.println("Welcome Librarian : ");
+                    Librarian();
+                    break;
                 case 3:
                     int userChoice;
                     do {
