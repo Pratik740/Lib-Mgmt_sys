@@ -20,15 +20,17 @@ public class Guest {
     public String getName() { return name; }
     public String getContact() { return contact; }
 
-    public void displayBooks() {
+    public boolean displayBooks() {
         if (!this.currently_reading_books.isEmpty()) {
             System.out.println(this.name + " has the following books currently: -\n");
             for (Book book : this.currently_reading_books) {
                 System.out.println(book);
             }
+            return true;
         }
         else {
             System.out.println(this.name + " is not reading any books currently.");
+            return false;
         }
     }
 

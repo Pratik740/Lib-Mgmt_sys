@@ -76,7 +76,7 @@ public class GuestService extends PersonService{
 
         guest.removeBook(bookId);
 
-        String query = "UPDATE guest_book_usage SET end_time = CURRENT_TIMESTAMP, fine_amt = GREATEST(TIMESTAMPDIFF(sestart_time, NOW()), 0) WHERE guest_id = ? AND book_id = ? AND end_time IS NULL";
+        String query = "UPDATE guest_book_usage SET end_time = CURRENT_TIMESTAMP, fine_amt = GREATEST(TIMESTAMPDIFF(second ,start_time, NOW()), 0)*0.02 WHERE guest_id = ? AND book_id = ? AND end_time IS NULL";
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {
             stmt.setInt(1, guestId);
@@ -93,7 +93,7 @@ public class GuestService extends PersonService{
         int guestId = guest.getId();
 
         //Return all presently reading books as on logout all books would be auto submitted to the librarian
-        ArrayList<Book> temp = guest.getCurrently_reading_books();
+        ArrayList<Book> temp = new ArrayList<>(guest.getCurrently_reading_books());;
         for (Book book : temp) {
             returnBook(guest, book.getId());
         }

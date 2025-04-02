@@ -47,11 +47,14 @@ public class LibraryCLI {
                     GuestService.startReading(guest,bookId);
                     break;
                 case 2:
-                    System.out.println("All the books owed by you is as follows:");
-                    System.out.println("Enter book Id of the book you wish to return");
-                    guest.displayBooks();
-                    int bookID = Integer.parseInt(sc.nextLine());
-                    GuestService.returnBook(guest,bookID);
+                    System.out.println("All the books owed by you is as follows: (Enter the book - id of the one you wish to return)");
+                    if (guest.displayBooks()) {
+                        int bookID = Integer.parseInt(sc.nextLine());
+                        GuestService.returnBook(guest,bookID);
+                    } else {
+                        System.out.println("Enter your choice: ");
+                    }
+
                     break;
                 case 3:
                     GuestService.logoutGuest(guest);
