@@ -1,5 +1,6 @@
 package services;
 
+import Schedulers.FineService;
 import db.DatabaseManager;
 import models.Transaction;
 import models.User;
@@ -145,14 +146,11 @@ public class UserService extends PersonService {
                                                  JOIN transactions t ON a.copy_id = t.book_copy_id WHERE t.user_id = ?;
                           """;
         String query = """
-                       
-                UPDATE
-                transactions
-                       SET return_date = now(),
-                       fine_amount = DATEDIFF(
-                now(), due_date) * 10
-                       WHERE id = ?;
-                       """;
+                        UPDATE transactions
+                            SET return_date = now(),
+                            fine_amount = DATEDIFF(now(), due_date) * 10
+                        WHERE id = ?;
+                        """;
 
         String fineQuery = """
                            UPDATE fines
@@ -245,56 +243,69 @@ public class UserService extends PersonService {
         }
 
         String fineCount = "select count(*) as count from fines where user_id = ?";
-        String insertionQuery = "insert into book_requests(user_id, book_id, book_copy_id, request_date, status) values(?, ?, ?, current_date, ?)";
+        String reqInsertQuery = "insert into book_requests(user_id, book_id, book_copy_id, status) values(?, ?, ?, ?)";
         String copyIdFinder = "select copy_number from book_copies where book_id = ? AND available = true ";
         String reservationInsert = "insert into reservations(user_id,book_id,request_date,expected_availability) values(?,?,current_date,?) ";
         String oldestTransaction = "select due_date from book_copies as b INNER JOIN transactions as t ON b.id = t.book_copy_id WHERE b.book_id = ? ORDER BY due_date ASC LIMIT 1";
+        String updateCopyAvailability = "update book_copies set available = false where id = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement stmt1 = conn.prepareStatement(fineCount);
-             PreparedStatement stmt2 = conn.prepareStatement(insertionQuery);
-             PreparedStatement stmt3 = conn.prepareStatement(copyIdFinder);
-             PreparedStatement stmt4 = conn.prepareStatement(reservationInsert);
-             PreparedStatement stmt5 = conn.prepareStatement(oldestTransaction)) {
+             PreparedStatement fineStmt = conn.prepareStatement(fineCount);
+             PreparedStatement reqInsertStmt = conn.prepareStatement(reqInsertQuery);
+             PreparedStatement availFind = conn.prepareStatement(copyIdFinder);
+             PreparedStatement reservationStmt = conn.prepareStatement(reservationInsert);
+             PreparedStatement stmt5 = conn.prepareStatement(oldestTransaction);
+             PreparedStatement updateCopyStmt = conn.prepareStatement(updateCopyAvailability)) {
 
-            stmt1.setInt(1, user.getId());
-            ResultSet rs1 = stmt1.executeQuery();
+            fineStmt.setInt(1, user.getId());
+            ResultSet rs1 = fineStmt.executeQuery();
             if (rs1.next()) {
                 if (rs1.getInt("count") > 3) {
                     System.out.println("Cannot request book as user has more than 3 pending fines!.");
-                    stmt2.setInt(1, user.getId());
-                    stmt2.setInt(2, bookId);
-                    stmt2.setNull(3, Types.INTEGER);
-                    stmt2.setString(4, "Rejected");
-                    stmt2.executeUpdate();
+                    reqInsertStmt.setInt(1, user.getId());
+                    reqInsertStmt.setInt(2, bookId);
+                    reqInsertStmt.setNull(3, Types.INTEGER);
+                    reqInsertStmt.setString(4, "Rejected");
+                    reqInsertStmt.executeUpdate();
                     return true;
                 }
             }
-            stmt3.setInt(1, bookId);
-            ResultSet rs3 = stmt3.executeQuery();
-            stmt5.setInt(1, bookId);
-            ResultSet rs5 = stmt5.executeQuery();
-            if(rs3.next()){
+
+            //Find available copy
+            availFind.setInt(1, bookId);
+            ResultSet availCopy = availFind.executeQuery();
+
+            if(availCopy.next()) {
                 System.out.println("Your request has been processed in the Book Requests!!!");
-                stmt2.setInt(1, user.getId());
-                stmt2.setInt(2, bookId);
-                stmt2.setInt(3, rs3.getInt("copy_number" ));
-                stmt2.setString(4, "Pending");
-                stmt2.executeUpdate();
-            }
-            else{
+                reqInsertStmt.setInt(1, user.getId());
+                reqInsertStmt.setInt(2, bookId);
+                reqInsertStmt.setInt(3, availCopy.getInt("copy_number"));
+                reqInsertStmt.setString(4, "Pending");
+                reqInsertStmt.executeUpdate();
+
+                updateCopyStmt.setInt(1, availCopy.getInt("id"));
+                updateCopyStmt.executeUpdate();
+
+                return true;
+            } else {
+                //Since book is unavailable we find the expected availability date by the earliest approaching due date
+                stmt5.setInt(1, bookId);
+                ResultSet rs5 = stmt5.executeQuery();
+
                 System.out.println("Oops!!! We are fresh out of that book copies.");
                 rs5.next();
-                stmt4.setInt(1,user.getId());
-                stmt4.setInt(2,bookId);
-                stmt4.setDate(3,rs5.getDate("due_date"));
-                stmt4.executeUpdate();
+                reservationStmt.setInt(1,user.getId());
+                reservationStmt.setInt(2,bookId);
+                reservationStmt.setDate(3,rs5.getDate("due_date"));
+                reservationStmt.executeUpdate();
+
+                return true;
             }
         } catch (SQLException e) {
             System.err.println("User not able to request book: " + e.getMessage());
             e.printStackTrace();
+            return false;
         }
-        return true;
     }
 
 
@@ -320,7 +331,7 @@ public class UserService extends PersonService {
             stmt1.setInt(1, user.getId());
             ResultSet rs1 = stmt1.executeQuery();
             if(rs1.next()){
-                System.out.println("Books that have been reserved by others :");
+                System.out.println("Books that you wanted to borrow but are currently unavailable: -");
                 System.out.printf("%-5s %-10s %-25s%n", "ID", "Book ID", "Expected Availability");
                 System.out.println("--------------------------------------------------");
                 do{
@@ -340,8 +351,10 @@ public class UserService extends PersonService {
 
     public void CancelBookRequest(User user, int requestId){
         String delRequest = "delete from book_requests where user_id = ? AND id = ?";
+        String copyId = "select "
         try(Connection conn = DatabaseManager.getConnection();
-            PreparedStatement stmt = conn.prepareStatement(delRequest)){
+            PreparedStatement stmt = conn.prepareStatement(delRequest);
+            ){
             stmt.setInt(1, user.getId());
             stmt.setInt(2, requestId);
             int rowsAffected = stmt.executeUpdate(); // Check how many rows were deleted
@@ -350,8 +363,7 @@ public class UserService extends PersonService {
             } else {
                 System.out.println("No book request found with ID " + requestId + " for this user.");
             }
-        }
-        catch(SQLException e){
+        } catch (SQLException e){
             e.printStackTrace();
         }
     }
@@ -375,23 +387,3 @@ public class UserService extends PersonService {
     }
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

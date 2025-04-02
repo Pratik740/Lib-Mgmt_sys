@@ -10,7 +10,7 @@ import java.sql.*;
 public class LibrarianService {
     public static Librarian loginLibrarian(String email, String password) {
         String login = "select * from staff where email = ? and password_hash = ?";
-        String auditLogin = "insert into audit_log(staff_id, action) values(?,?)";
+        String auditLogin = "insert into audit_log(staff_id, action) values(?,?) ";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement stmt = conn.prepareStatement(login);
@@ -68,28 +68,6 @@ public class LibrarianService {
              PreparedStatement viewStmt = conn.prepareStatement(viewPending);
              PreparedStatement auditStmt = conn.prepareStatement(auditLog)) {
 
-             viewStmt.executeQuery();
-             ResultSet rs = viewStmt.executeQuery();
-
-            System.out.printf("%-5s | %-20s | %-25s | %-30s | %-12s | %-12s | %-7s%n",
-                    "ID", "Name", "Email", "Book Title", "Issue Date", "Due Date", "Fine");
-            System.out.println("-------------------------------------------------------------------------------------------------------------");
-
-            // Print table rows
-            while (rs.next()) {
-                System.out.printf("%-5d | %-20s | %-25s | %-30s | %-12s | %-12s | $%-6.2f%n",
-                        rs.getInt("user_id"),
-                        rs.getString("name"),
-                        rs.getString("email"),
-                        rs.getString("title"),
-                        rs.getDate("issue_date"),
-                        rs.getDate("due_date"),
-                        rs.getDouble("amount")
-                );
-            }
-
-            auditStmt.setInt(1, staff.getId());
-            auditStmt.setString(2, staff.getRole() + " " + staff.getName() + " viewed pending fine details of all users.");
         } catch (SQLException e) {
             System.err.println("Error encountered while viewing pending users: " + e.getMessage());
             e.printStackTrace();
