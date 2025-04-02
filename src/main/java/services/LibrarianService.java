@@ -1,6 +1,6 @@
 package services;
 
-import Schedulers.FineService;
+import Schedulers.*;
 import db.DatabaseManager;
 import models.Librarian;
 import models.Staff;
@@ -21,6 +21,7 @@ public class LibrarianService {
             ResultSet rs = stmt.executeQuery();
 
             FineService.populateFineTable();
+            ReservationService.reserveToReqPopulate();
 
             if (rs.next()) {
 
@@ -144,18 +145,49 @@ public class LibrarianService {
         String pendingRequests = """
                     UPDATE book_requests
                     SET status = 'Approved'
-                    WHERE status = 'pending';
+                    WHERE status = 'Pending';
                    """;
+
+        String appendToTransactions = "insert into transactions(user_id, book_copy_id, issue_date, due_date)" +
+                                      "values (?, ?, current_date, date_add(current_date, INTERVAL 14 day))";
+
+        String selectPendingQuery = "select user_id, book_copy_id from book_requests where status = 'Pending'";
+
+        String messageToUser = "insert into messages(user_id, description)  value(?, ?)";
+
+        String bookNameQuery = "select books.title from books join book_copies on books.id = book_copies.book_id where book_copies.id = ?";
+
         try(Connection conn = DatabaseManager.getConnection();
-        PreparedStatement stmt = conn.prepareStatement(pendingRequests);
-        PreparedStatement stmt1 = conn.prepareStatement(auditLog)) {
+            PreparedStatement stmt = conn.prepareStatement(pendingRequests);
+            PreparedStatement stmt1 = conn.prepareStatement(auditLog);
+            PreparedStatement appendStmt = conn.prepareStatement(appendToTransactions);
+            PreparedStatement selectPendingStmt = conn.prepareStatement(selectPendingQuery);
+            PreparedStatement text = conn.prepareStatement(messageToUser);
+            PreparedStatement bookNameStmt = conn.prepareStatement(bookNameQuery);) {
+
+
+            ResultSet rs = selectPendingStmt.executeQuery();
+
+            while (rs.next()) {
+                appendStmt.setInt(1, rs.getInt("user_id"));
+                appendStmt.setInt(2, rs.getInt("book_copy_id"));
+                appendStmt.executeQuery();
+            }
+
+            bookNameStmt.setInt(1, rs.getInt(2));
+            ResultSet book = bookNameStmt.executeQuery();
+
+            text.setInt(1, rs.getInt("user_id"));
+            text.setString(2, "Request for book " + book.getString("title") + " has been approved.");
+
             stmt.executeUpdate();
+
             System.out.println("All pending book requests have been approved.");
             stmt1.setInt(1, staff.getId());
             stmt1.setString(2, staff.getRole() + " " + staff.getName() + " approved all pending book requests.");
             stmt1.executeUpdate();
-        }
-        catch (SQLException e) {
+
+        } catch (SQLException e) {
             System.err.println("Error encountered while providing approvals: " + e.getMessage());
         }
     }
