@@ -1,9 +1,10 @@
 package services;
 
+import Schedulers.FineService;
 import db.DatabaseManager;
 import models.Librarian;
+import models.Staff;
 
-import javax.xml.crypto.Data;
 import java.sql.*;
 
 public class LibrarianService {
@@ -44,7 +45,7 @@ public class LibrarianService {
         }
     }
 
-    public static void viewPendingFineDetails (Librarian librarian) {
+    public static void viewPendingFineDetails (Staff staff) {
         String viewPending = """                
                              SELECT
                                  users.id AS user_id,
@@ -87,8 +88,8 @@ public class LibrarianService {
                 );
             }
 
-            auditStmt.setInt(1, librarian.getId());
-            auditStmt.setString(2, "Librarian " + librarian.getName() + "viewed pending fine details of all users.");
+            auditStmt.setInt(1, staff.getId());
+            auditStmt.setString(2, staff.getRole() + " " + staff.getName() + " viewed pending fine details of all users.");
         } catch (SQLException e) {
             System.err.println("Error encountered while viewing pending users: " + e.getMessage());
             e.printStackTrace();
@@ -96,7 +97,7 @@ public class LibrarianService {
     }
 
 
-    public static void viewAvailableBookCopies (Librarian librarian) {
+    public static void viewAvailableBookCopies (Staff staff) {
         String availQuery = """
                             SELECT books.id, books.title,books.author, COUNT(book_copies.id) AS total_copies
                             FROM books
@@ -129,8 +130,8 @@ public class LibrarianService {
 
             System.out.println("+------+--------------------------------+----------------------+--------+");
 
-            auditStmt.setInt(1, librarian.getId());
-            auditStmt.setString(2, "Librarian " + librarian.getName() + "viewed all available books and their copies.");
+            auditStmt.setInt(1, staff.getId());
+            auditStmt.setString(2, staff.getRole() + " "  + staff.getName() + "viewed all available books and their copies.");
         } catch (SQLException e) {
             System.err.println("Error encountered while viewing available book copies: " + e.getMessage());
             e.printStackTrace();
@@ -138,7 +139,7 @@ public class LibrarianService {
 
     }
 
-    public void provideApprovals(Librarian librarian) {
+    public void provideApprovals(Staff staff) {
         String auditLog = "insert into audit_log(staff_id, action) values(?,?)";
         String pendingRequests = """
                     UPDATE book_requests
@@ -149,9 +150,9 @@ public class LibrarianService {
         PreparedStatement stmt = conn.prepareStatement(pendingRequests);
         PreparedStatement stmt1 = conn.prepareStatement(auditLog)) {
             stmt.executeUpdate();
-            System.out.println("All pending requests have been approved.");
-            stmt1.setInt(1, librarian.getId());
-            stmt1.setString(2, "All current pending requests had been Approved");
+            System.out.println("All pending book requests have been approved.");
+            stmt1.setInt(1, staff.getId());
+            stmt1.setString(2, staff.getRole() + " " + staff.getName() + " approved all pending book requests.");
             stmt1.executeUpdate();
         }
         catch (SQLException e) {
@@ -161,7 +162,7 @@ public class LibrarianService {
 
 
 
-    public static void guestDetails(Librarian librarian) {
+    public static void guestDetails(Staff staff) {
         String allGuests = "select * from guests";
 
         String auditLog = "insert into audit_log(staff_id, action) values(?,?)";
@@ -184,16 +185,16 @@ public class LibrarianService {
 
             System.out.println("+----+----------------+----------------+-----------------+---------------------+");
 
-        auditStmt.setInt(1, librarian.getId());
-        auditStmt.setString(2, "Librarian " + librarian.getName() + "viewed all guests.");
-        auditStmt.executeUpdate();
+            auditStmt.setInt(1, staff.getId());
+            auditStmt.setString(2, staff.getRole() + " " + staff.getName() + " viewed all guests' details.");
+            auditStmt.executeUpdate();
         }
         catch (SQLException e) {
             System.err.println("Error encountered while guest details: " + e.getMessage());
         }
     }
 
-    public static void guestBookDetails (Librarian librarian) {
+    public static void guestBookDetails (Staff staff) {
         String guestBookDetailsQuery = """
                                        SELECT
                                            guests.id,
@@ -238,8 +239,8 @@ public class LibrarianService {
 
             System.out.println("+----+----------------+-----------------------------+---------------------+---------------------+--------+");
 
-            auditStmt.setInt(1, librarian.getId());
-            auditStmt.setString(2, "Librarian " + librarian.getName() + "viewed the book reading details of each guest.");
+            auditStmt.setInt(1, staff.getId());
+            auditStmt.setString(2, staff.getRole() + " "  + staff.getName() + "viewed the book reading details of each guest.");
             auditStmt.executeUpdate();
 
         } catch (SQLException e) {
@@ -247,7 +248,7 @@ public class LibrarianService {
             e.printStackTrace();
         }
     }
-    public void checkoutUser(Librarian librarian,int userId) {
+    public void checkoutUser(Staff staff,int userId) {
         String getUser = "select * from users where id = ?";
         String auditLog = "insert into audit_log(staff_id, action) values(?,?)";
         try(Connection conn = DatabaseManager.getConnection();
@@ -259,8 +260,8 @@ public class LibrarianService {
                                 " Name : "+rs.getString("name")+
                                 " Email : "+rs.getString("email")+
                                 " Date of Joining : "+rs.getDate("date_of_joining"));
-            auditStmt.setInt(1, librarian.getId());
-            auditStmt.setString(2,"Librarian "+librarian.getName()+" viewed the details " +
+            auditStmt.setInt(1, staff.getId());
+            auditStmt.setString(2,staff.getRole() + " " +staff.getName()+" viewed the details " +
                     "of User "+rs.getString("name"));
             auditStmt.executeUpdate();
         }
@@ -269,7 +270,7 @@ public class LibrarianService {
         }
     }
     // It will contain all the books that are overdue(Book is with him/her) by any user.
-    public void overdueBooksOfUser(Librarian librarian,int userId){
+    public void overdueBooksOfUser(Staff staff,int userId){
             String getOverDue = """
                     SELECT title,due_date,amount from
                     fines as f INNER JOIN transactions as t ON f.transaction_id = t.id
@@ -296,8 +297,8 @@ public class LibrarianService {
                 }
 
                 System.out.println("+-------------------------------+------------+--------+");
-                auditstmt.setInt(1,librarian.getId());
-                auditstmt.setString(2,"Librarian "+librarian.getName()+" viewed the overdue books of User "+userId);
+                auditstmt.setInt(1,staff.getId());
+                auditstmt.setString(2,staff.getRole() + " " +staff.getName()+" viewed the overdue books of User "+userId);
                 auditstmt.executeUpdate();
             }
             catch (SQLException e) {
@@ -305,7 +306,7 @@ public class LibrarianService {
             }
     }
 
-    public void returnedBooksOnCurrentDate(Librarian librarian) {
+    public void returnedBooksOnCurrentDate(Staff staff) {
         String returned = """
                 select title , amount , book_copy_id , user_id from fines as f
                 INNER JOIN transactions as t ON f.transaction_id = t.id
@@ -334,8 +335,8 @@ public class LibrarianService {
             }
             System.out.println("+---------+-------------------------------+--------------+--------+");
 
-            auditlog.setInt(1, librarian.getId());
-            auditlog.setString(2,"Librarian "+librarian.getName()+" viewed returned books on date : "+currentdate);
+            auditlog.setInt(1, staff.getId());
+            auditlog.setString(2,staff.getRole() + " " +staff.getName()+" viewed returned books on date : "+currentdate);
             auditlog.executeUpdate();
         }
         catch (SQLException e) {
@@ -343,23 +344,23 @@ public class LibrarianService {
         }
     }
 
-    public void getMyProfile(Librarian librarian) {
+    public void getMyProfile(Staff staff) {
         System.out.println("+----------------------+-----+---------------------------+------------+-------------+------------+");
         System.out.println("| Name                 | ID  | Email                     | Role       | Shift Start | Shift End  |");
         System.out.println("+----------------------+-----+---------------------------+------------+-------------+------------+");
 
         System.out.printf("| %-20s | %-3s | %-25s | %-10s | %-11s | %-10s |\n",
-                librarian.getName(),
-                librarian.getId(),
-                librarian.getEmail(),
-                librarian.getRole(),
-                librarian.getShiftStart(),
-                librarian.getShiftEnd());
+                staff.getName(),
+                staff.getId(),
+                staff.getEmail(),
+                staff.getRole(),
+                staff.getShiftStart(),
+                staff.getShiftEnd());
 
         System.out.println("+----------------------+-----+---------------------------+------------+-------------+------------+");
     }
 
-    public void viewPendingApprovals(Librarian librarian) {
+    public void viewPendingApprovals(Staff staff) {
         String requests = "Select * from book_requests where status = 'Pending'";
         String auditLog = "insert into audit_log(staff_id, action) values(?,?)";
         try(Connection conn = DatabaseManager.getConnection();
@@ -381,8 +382,8 @@ public class LibrarianService {
                         rs.getTimestamp("request_date"));
             }
             System.out.println("+----+---------+---------+--------------+---------------------+");
-            auditstmt.setInt(1, librarian.getId());
-            auditstmt.setString(2, "Librarian "+librarian.getName()+" has viewed all pending approvals");
+            auditstmt.setInt(1, staff.getId());
+            auditstmt.setString(2, staff.getRole() + " " +staff.getName()+" has viewed all pending approvals");
             auditstmt.executeUpdate();
         }
         catch (SQLException e) {
