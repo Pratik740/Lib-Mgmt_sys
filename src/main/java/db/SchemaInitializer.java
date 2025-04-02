@@ -181,6 +181,7 @@ public class SchemaInitializer {
                 );
             """;
             stmt.execute(createMessagesTable);
+
             conn.commit();
 
             System.out.println("Database schema initialized successfully!");

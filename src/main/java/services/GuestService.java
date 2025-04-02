@@ -27,7 +27,7 @@ public class GuestService extends PersonService{
                 }
             }
         } catch (SQLIntegrityConstraintViolationException e) {
-            System.out.println("Guest with this contact already exists.");
+            System.err.println("Guest with this contact already exists.");
         } catch (SQLException e) {
             System.err.println("Some error occurred while trying to insert a guest.");
             e.printStackTrace();
