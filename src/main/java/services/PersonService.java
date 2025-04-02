@@ -10,7 +10,7 @@ import java.util.List;
 public class PersonService {
 
     // View all available genres
-    public void viewGenres() {
+    public static void viewGenres() {
         String query = "SELECT name FROM genres";
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -27,7 +27,7 @@ public class PersonService {
     }
 
     // View available books by genre using Book model
-    public List<Book> getBooksByGenre(String genreName) {
+    public static List<Book> getBooksByGenre(String genreName) {
         String query = """
             SELECT b.id, b.title, b.author, b.isbn, b.genre_id
             FROM books b
@@ -58,15 +58,15 @@ public class PersonService {
     }
 
     // Display books retrieved by getBooksByGenre
-    public void viewBooksByGenre(String genreName) {
+    public static void viewBooksByGenre(String genreName) {
         List<Book> books = getBooksByGenre(genreName);
         System.out.printf("Available Books in Genre '%s':%n", genreName);
         for (Book book : books) {
-            System.out.printf("- %s by %s (ISBN: %s)%n", book.getTitle(), book.getAuthor(), book.getIsbn());
+            System.out.printf("-%s. %s by %s (ISBN: %s)%n",book.getId(), book.getTitle(), book.getAuthor(), book.getIsbn());
         }
     }
 
-    public void viewBooksByAuthor(String author) {
+    public static void viewBooksByAuthor(String author) {
         String query = "SELECT * FROM books WHERE author = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
