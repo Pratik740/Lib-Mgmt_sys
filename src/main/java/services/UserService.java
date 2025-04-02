@@ -44,17 +44,21 @@ public class UserService extends PersonService {
             stmt.setString(2, passwordHash);
             ResultSet rs = stmt.executeQuery();
 
-            FineService.populateFineTable();
-            ReservationService.reserveToReqPopulate();
+
 
             if (rs.next()) {
-                return new User(
+                User user =  new User(
                         rs.getInt("id"),
                         rs.getString("name"),
                         rs.getString("email"),
                         rs.getString("password_hash"),
                         rs.getDate("date_of_joining").toLocalDate()
                 );
+
+                FineService.populateFineTable();
+                ReservationService.reserveToReqPopulate();
+
+                return user;
             } else {
                 System.out.println("User not found!");
                 return null;
@@ -235,7 +239,7 @@ public class UserService extends PersonService {
     }
 
 
-    public boolean requestBook(User user , int bookId) {
+    public static boolean requestBook(User user , int bookId) {
 
         for (Book book : user.getBooks_borrowed()) {
             if (book.getId() == bookId) {
@@ -246,7 +250,7 @@ public class UserService extends PersonService {
 
         String fineCount = "select count(*) as count from fines where user_id = ?";
         String reqInsertQuery = "insert into book_requests(user_id, book_id, book_copy_id, status) values(?, ?, ?, ?)";
-        String copyIdFinder = "select copy_number from book_copies where book_id = ? AND available = true ";
+        String copyIdFinder = "select id from book_copies where book_id = ? AND available = true ";
         String reservationInsert = "insert into reservations(user_id,book_id,expected_availability) values(?,?,?) ";
         String oldestTransaction = "select due_date from book_copies as b INNER JOIN transactions as t ON b.id = t.book_copy_id WHERE b.book_id = ? ORDER BY due_date ASC LIMIT 1";
         String updateCopyAvailability = "update book_copies set available = false where id = ?";
@@ -281,7 +285,7 @@ public class UserService extends PersonService {
                 System.out.println("Your request has been processed in the Book Requests!!!");
                 reqInsertStmt.setInt(1, user.getId());
                 reqInsertStmt.setInt(2, bookId);
-                reqInsertStmt.setInt(3, availCopy.getInt("copy_number"));
+                reqInsertStmt.setInt(3, availCopy.getInt("id"));
                 reqInsertStmt.setString(4, "Pending");
                 reqInsertStmt.executeUpdate();
 
@@ -312,7 +316,7 @@ public class UserService extends PersonService {
 
 
 
-    public void viewBookRequests(User user){
+    public static void viewBookRequests(User user){
         String fromBookRequest = "select * from book_requests where user_id = ?";
         String fromReservations = "select * from reservations where user_id = ?";
         try(Connection conn = DatabaseManager.getConnection();
@@ -351,7 +355,7 @@ public class UserService extends PersonService {
         }
     }
 
-    public void CancelBookRequest(User user, int requestId){
+    public static void CancelBookRequest(User user, int requestId){
         String delRequest = "delete from book_requests where user_id = ? AND id = ?";
         String copyId = "select book_copy_id from book_requests where user_id = ? and  id = ?";
         String updateAvail = "update book_copies set available = true where id = ?";
@@ -385,7 +389,7 @@ public class UserService extends PersonService {
         }
     }
 
-    public void CancelReservationRequest(User user, int requestId){
+    public static void CancelReservationRequest(User user, int requestId){
         String delRequest = "delete from reservations where user_id = ? AND id = ?";
         try(Connection conn = DatabaseManager.getConnection();
         PreparedStatement stmt = conn.prepareStatement(delRequest)){

@@ -27,6 +27,7 @@ public class FineService {
                 stmt2.setInt(1, rs.getInt("user_id"));
                 stmt2.setInt(2, rs.getInt("transaction_id"));
                 stmt2.setDouble(3, rs.getDouble("amount"));
+                stmt2.executeUpdate();
             }
 
             updateFinesTable();
