@@ -4,7 +4,7 @@
 //
 //
 //public class TestGuest {
-//    public static void main(String[] args) {
+//    public static void cliMaster(String[] args) {
 //        AdminService.
 //    }
 //}

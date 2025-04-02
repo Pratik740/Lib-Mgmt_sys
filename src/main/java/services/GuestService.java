@@ -27,7 +27,7 @@ public class GuestService extends PersonService{
                 }
             }
         } catch (SQLIntegrityConstraintViolationException e) {
-            System.out.println("Guest with this contact already exists.");
+            System.err.println("Guest with this contact already exists.");
         } catch (SQLException e) {
             System.err.println("Some error occurred while trying to insert a guest.");
             e.printStackTrace();
@@ -53,12 +53,14 @@ public class GuestService extends PersonService{
             book.setInt(1, bookID);
             ResultSet rs = book.executeQuery();
 
-            Book to_add = new Book(rs.getInt("id"),
-                                    rs.getString("title"),
-                                    rs.getString("author"),
-                                    rs.getString("isbn"),
-                                    rs.getInt("genre_id"));
-
+            Book to_add = null;
+            if (rs.next()) {
+                to_add = new Book(rs.getInt("id"),
+                        rs.getString("title"),
+                        rs.getString("author"),
+                        rs.getString("isbn"),
+                        rs.getInt("genre_id"));
+            }
 
             guest.addBook(to_add);
         } catch (SQLException e) {
@@ -74,7 +76,7 @@ public class GuestService extends PersonService{
 
         guest.removeBook(bookId);
 
-        String query = "UPDATE guest_book_usage SET end_time = CURRENT_TIMESTAMP, fine_amt = GREATEST(TIMESTAMPDIFF(MINUTE, start_time, NOW()), 0) WHERE guest_id = ? AND book_id = ? AND end_time IS NULL";
+        String query = "UPDATE guest_book_usage SET end_time = CURRENT_TIMESTAMP, fine_amt = GREATEST(TIMESTAMPDIFF(sestart_time, NOW()), 0) WHERE guest_id = ? AND book_id = ? AND end_time IS NULL";
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {
             stmt.setInt(1, guestId);
