@@ -1,6 +1,5 @@
 package db;
 
-import db.SchemaInitializer;
 
 public class TestSchema {
     public static void main(String[] args) {
