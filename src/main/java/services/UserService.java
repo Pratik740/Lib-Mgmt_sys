@@ -178,10 +178,7 @@ public class UserService extends PersonService {
                 }
             }
 
-            stmt2.
-
-
-                    setInt(1, transactionId);
+            stmt2.setInt(1, transactionId);
             stmt2.executeUpdate();
 
             if (overdue) {
@@ -190,8 +187,7 @@ public class UserService extends PersonService {
                 stmt3.setInt(3, transactionId);
                 stmt3.executeUpdate();
             }
-
-
+            markBookAsAvailable(bookId);
 
         } catch (SQLException e) {
             e.printStackTrace();
@@ -235,7 +231,7 @@ public class UserService extends PersonService {
     }
 
 
-    public boolean requestBook(User user , int bookId) {
+    public static boolean requestBook(User user , int bookId) {
 
         for (Book book : user.getBooks_borrowed()) {
             if (book.getId() == bookId) {
@@ -312,7 +308,7 @@ public class UserService extends PersonService {
 
 
 
-    public void viewBookRequests(User user){
+    public static void viewBookRequests(User user){
         String fromBookRequest = "select * from book_requests where user_id = ?";
         String fromReservations = "select * from reservations where user_id = ?";
         try(Connection conn = DatabaseManager.getConnection();
@@ -351,7 +347,7 @@ public class UserService extends PersonService {
         }
     }
 
-    public void CancelBookRequest(User user, int requestId){
+    public static void CancelBookRequest(User user, int requestId){
         String delRequest = "delete from book_requests where user_id = ? AND id = ?";
         String copyId = "select book_copy_id from book_requests where user_id = ? and  id = ?";
         String updateAvail = "update book_copies set available = true where id = ?";
@@ -385,7 +381,7 @@ public class UserService extends PersonService {
         }
     }
 
-    public void CancelReservationRequest(User user, int requestId){
+    public static void CancelReservationRequest(User user, int requestId){
         String delRequest = "delete from reservations where user_id = ? AND id = ?";
         try(Connection conn = DatabaseManager.getConnection();
         PreparedStatement stmt = conn.prepareStatement(delRequest)){
@@ -416,5 +412,6 @@ public class UserService extends PersonService {
             e.printStackTrace();
         }
     }
+
 
 }
