@@ -159,12 +159,14 @@ public class config {
                                    ('James Taylor', 'jtaylor@library.org', 'Reference432!', 'Librarian', '08:00:00', '16:00:00'),
                                    ('Sophia Brown', 'sbrown@library.org', 'ArchiveAccess654@', 'Librarian', '10:00:00', '18:00:00'),
                                    ('Daniel Patel', 'dpatel@library.org', 'Collection987#', 'Librarian', '13:00:00', '21:00:00'),
+                                   ('Temp', 'temp', 'temp','Librarian', '08:00:00', '16:00:00'),
                                   \s
                                    -- Admins
                                   ('Harsh Jaiswal', '112315070@cse.iiitp.ac.in', 'Master_Password_070', 'Admin', null, null),
                                   ('Ishan Nanglot', '112315074@cse.iiitp.ac.in', 'Master_Password_074', 'Admin', null, null),
                                   ('Pratik Jaiswal', '112315076@cse.iiitp.ac.in', 'Master_Password_076', 'Admin', null, null),
-                                  ('Jayata Roy', '112315077@cse.iiitp.ac.in', 'Master_Password_077', 'Admin', null, null);
+                                  ('Jayata Roy', '112315077@cse.iiitp.ac.in', 'Master_Password_077', 'Admin', null, null),
+                                  ('Administrator', 'admin', 'admin', 'Admin', null, null);
                                   \s""";
             stmt.executeUpdate(populateStaff);
 

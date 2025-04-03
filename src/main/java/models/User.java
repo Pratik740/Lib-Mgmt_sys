@@ -15,23 +15,9 @@ public class User extends Person {
         this.dateOfJoining = dateOfJoining;
     }
 
-    public LocalDate getDateOfJoining() {
-        return dateOfJoining;
-    }
-
-    public void setDateOfJoining(LocalDate dateOfJoining) {
-        this.dateOfJoining = dateOfJoining;
-    }
-
     public void displayBorrowedBooks() {
         for (Book book : books_borrowed) {
             System.out.println(book);
-        }
-    }
-
-    public void borrowingTransactions() {
-        for (Transaction transaction : transactions) {
-            System.out.println(transaction);
         }
     }
 

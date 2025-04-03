@@ -39,6 +39,7 @@ public class ReservationService {
                     fineCount.setInt(1, res.getInt(1));
 
                     ResultSet fine = fineCount.executeQuery();
+                    fine.next();
 
                     if (fine.getInt(1) > 3) {
 

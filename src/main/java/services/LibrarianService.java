@@ -20,21 +20,24 @@ public class LibrarianService {
             stmt.setString(2, password);
             ResultSet rs = stmt.executeQuery();
 
-            FineService.populateFineTable();
-            ReservationService.reserveToReqPopulate();
 
             if (rs.next()) {
 
-                auditStmt.setString(1, rs.getString("staff_id"));
+                auditStmt.setString(1, rs.getString("id"));
                 auditStmt.setString(2, "Librarian " + rs.getString("name") + " logged in");
                 auditStmt.executeUpdate();
 
-                return new Librarian(rs.getInt("id"),
+                Librarian lib =  new Librarian(rs.getInt("id"),
                                      rs.getString("name"),
                                      rs.getString("email"),
                                      rs.getString("password_hash"),
                                      rs.getTime("shift_start").toLocalTime(),
                                      rs.getTime("shift_end").toLocalTime());
+
+                FineService.populateFineTable();
+                ReservationService.reserveToReqPopulate();
+
+                return lib;
             }
             else {
                 System.out.println("Login Failed, user not found!");
@@ -42,6 +45,7 @@ public class LibrarianService {
             }
         } catch (SQLException e) {
             System.err.println("Librarian login failed. Error: " + e.getMessage());
+            e.printStackTrace();
             return null;
         }
     }

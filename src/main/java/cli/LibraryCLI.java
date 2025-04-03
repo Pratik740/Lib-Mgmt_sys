@@ -63,7 +63,7 @@ public class LibraryCLI {
                     break;
                 case 4:
                     GuestService.logoutGuest(guest);
-                    break;
+                    return;
 
                 default:
                     System.out.println("Invalid choice");
@@ -128,13 +128,14 @@ public class LibraryCLI {
         do {
             System.out.println("\n=== User Menu ===");
             System.out.println("1. View Borrowed Books");
-            System.out.println("2. Return a Book");
-            System.out.println("3. Request a Book");
-            System.out.println("4. View My Requests/Reservations");
-            System.out.println("5. Cancel a Book Request");
-            System.out.println("6. Cancel a Reservation");
-            System.out.println("7. Delete Account");
-            System.out.println("8. Logout");
+            System.out.println("2. View overdue books and total fine owed.");
+            System.out.println("3. Return a Book");
+            System.out.println("4. Request a Book");
+            System.out.println("5. View My Requests/Reservations");
+            System.out.println("6. Cancel a Book Request");
+            System.out.println("7. Cancel a Reservation");
+            System.out.println("8. Delete Account");
+            System.out.println("9. Logout");
             System.out.print("Enter choice: ");
             choice = sc.nextInt();
             sc.nextLine();  // Consume newline
@@ -150,8 +151,10 @@ public class LibraryCLI {
                         System.out.println("\n--- No Books Borrowed ---");
                     }
                     break;
-
                 case 2:
+                    System.out.println("Total amount owed by you to the library: " + user.ComputeFine());
+                    break;
+                case 3:
                     if (user.getBooks_borrowed().isEmpty()) {
                         System.out.println("\n--- No Borrowed Books ---");
                         for (Book book : user.getBooks_borrowed()) {
@@ -169,7 +172,7 @@ public class LibraryCLI {
                     }
                     break;
 
-                case 3:
+                case 4:
                     System.out.println("\n--- Request Book ---");
                     System.out.println("View Books by genre");
                     PersonService.viewGenres();
@@ -184,26 +187,26 @@ public class LibraryCLI {
                     }
                     break;
 
-                case 4:
+                case 5:
                     System.out.println("\n--- My Requests ---");
                     UserService.viewBookRequests(user);
                     break;
 
-                case 5:
+                case 6:
                     UserService.viewBookRequests(user);
                     System.out.print("Enter Request ID to cancel: ");
                     int reqId = sc.nextInt();
                     UserService.CancelBookRequest(user, reqId);
                     break;
 
-                case 6:
+                case 7:
                     UserService.viewBookRequests(user);
                     System.out.print("Enter Reservation ID to cancel: ");
                     int resId = sc.nextInt();
                     UserService.CancelReservationRequest(user, resId);
                     break;
 
-                case 7:
+                case 8:
                     if (UserService.deleteUser(user)) {
                         System.out.println("Account deleted successfully!");
                         return;
@@ -212,15 +215,70 @@ public class LibraryCLI {
                     }
                     break;
 
-                case 8:
+                case 9:
                     System.out.println("Logging out...");
-                    break;
+                    return;
 
                 default:
                     System.out.println("Invalid choice!");
             }
         } while (choice!=8);
 }
+
+    public static void admin() {
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("\nAdmin Login");
+        System.out.print("Enter email: ");
+        String email = scanner.next();
+        System.out.print("Enter password: ");
+        String password = scanner.next();
+
+        Admin admin = AdminService.adminLogin(email, password);
+        if (admin == null) {
+            System.out.println("Login failed. Returning to main menu.");
+            return;
+        }
+
+        int adminChoice;
+        do {
+            System.out.println("\nAdmin Menu");
+            System.out.println("1. View Staff Details");
+            System.out.println("2. Remove Staff");
+            System.out.println("3. View Audit Log");
+            System.out.println("4. View User Details");
+            System.out.println("5. View My Profile");
+            System.out.println("6. Logout");
+            System.out.print("Enter your choice: ");
+            adminChoice = scanner.nextInt();
+
+            switch(adminChoice) {
+                case 1:
+                    AdminService.viewStaff(admin);
+                    break;
+                case 2:
+                    System.out.print("Enter Staff ID to remove: ");
+                    int staffId = scanner.nextInt();
+                    AdminService.removeStaff(admin, staffId);
+                    break;
+                case 3:
+                    AdminService.viewAuditLog(admin);
+                    break;
+                case 4:
+                    AdminService.viewUserDetails(admin);
+                    break;
+                case 5:
+                    LibrarianService.getMyProfile(admin);
+                    break;
+                case 6:
+                    System.out.println("Logging out...");
+                    break;
+                default:
+                    System.out.println("Invalid choice, try again.");
+            }
+        } while(adminChoice != 6);
+    }
+
+
 
     public static void cliMaster() {
         System.out.println("Welcome to Library CLI");
@@ -231,6 +289,9 @@ public class LibraryCLI {
             System.out.println("1. Admin\n2. Librarian\n3. User\n4. Exit");
             choice = scanner.nextInt();
             switch(choice){
+                case 1:
+                    admin();
+                    break;
                 case 3:
                     int userChoice;
                     do {

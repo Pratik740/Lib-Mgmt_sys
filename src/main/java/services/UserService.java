@@ -102,7 +102,6 @@ public class UserService extends PersonService {
     //Arraylist of borrowed books for a particular user
     public static void getListOfBorrowedBooks(User user) {
         String query = """
-                       
                 select id, title, author, isbn, genre_id from
                        (select b.book_id as book_id from book_copies b join transactions t on t.book_copy_id = b.id where t.user_id = ? and t.return_date is null)
                        as a
@@ -115,7 +114,7 @@ public class UserService extends PersonService {
             ResultSet rs = stmt.executeQuery();
 
             while (rs.next()) {
-                Book book = new Book(rs.getInt("book_id"),
+                Book book = new Book(rs.getInt("id"),
                         rs.getString("title"),
                         rs.getString("author"),
                         rs.getString("isbn"),
@@ -214,12 +213,12 @@ public class UserService extends PersonService {
     public static boolean deleteUser(User user) {
         if (!user.getBooks_borrowed().isEmpty()) {
             System.out.println("Cannot delete user: Books are still borrowed.");
-            return true;
+            return false;
         }
 
         if (FineService.pendingFines(user)) {
             System.out.println("Cannot delete u e still pending.");
-            return true;
+            return false;
         }
 
         String delQuery = "delete from users where id = ?";
@@ -375,10 +374,12 @@ public class UserService extends PersonService {
 
             ResultSet rs = copyIdFinderStmt.executeQuery();
 
-            markBookAsAvailable(rs.getInt(1));
+            if (rs.next()) {
+                markBookAsAvailable(rs.getInt(1));
+                deallocCopy.setInt(1, rs.getInt(1));
+                deallocCopy.executeQuery();
+            }
 
-            deallocCopy.setInt(1, rs.getInt(1));
-            deallocCopy.executeQuery();
 
 
             stmt.setInt(1, user.getId());
