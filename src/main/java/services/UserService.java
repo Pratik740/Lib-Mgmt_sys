@@ -326,15 +326,19 @@ public class UserService extends PersonService {
             PreparedStatement stmt1 = conn.prepareStatement(fromReservations)){
             stmt.setInt(1, user.getId());
             ResultSet rs = stmt.executeQuery();
-            System.out.println("Book Requests waiting for approvals : ");
-            System.out.printf("%-5s %-10s %-15s %-10s%n", "ID", "Book ID", "Request Date", "Status");
-            System.out.println("--------------------------------------------------");
-            while(rs.next()){
-                System.out.printf("%-5d %-10d %-15s %-10s%n",
-                        rs.getInt("id"),
-                        rs.getInt("book_id"),
-                        rs.getDate("request_date"),
-                        rs.getString("status"));
+            if(rs.next()){
+                System.out.println("Book Requests waiting for approvals : ");
+                System.out.printf("%-5s %-10s %-15s %-10s%n", "ID", "Book ID", "Request Date", "Status");
+                System.out.println("--------------------------------------------------");
+                do {
+                    System.out.printf("%-5d %-10d %-15s %-10s%n",
+                            rs.getInt("id"),
+                            rs.getInt("book_id"),
+                            rs.getDate("request_date"),
+                            rs.getString("status"));
+                } while (rs.next());
+            } else {
+                System.out.println("\n\nNo Book Requests waiting for approvals \n\n");
             }
             stmt1.setInt(1, user.getId());
             ResultSet rs1 = stmt1.executeQuery();
@@ -349,6 +353,8 @@ public class UserService extends PersonService {
                             rs1.getDate("expected_availability")
                     );
                 }while(rs1.next());
+            } else {
+                System.out.println("\n\nNo Books in the reservation table (expected date show)\n\n");
             }
 
         }
@@ -357,43 +363,50 @@ public class UserService extends PersonService {
         }
     }
 
-    public static void CancelBookRequest(User user, int requestId){
-        String delRequest = "delete from book_requests where user_id = ? AND id = ?";
-        String copyId = "select book_copy_id from book_requests where user_id = ? and  id = ?";
-        String updateAvail = "update book_copies set available = true where id = ?";
+    public static void CancelBookRequest(User user, int requestId) {
+        String delRequest = "DELETE FROM book_requests WHERE user_id = ? AND id = ?";
+        String copyIdQuery = "SELECT book_copy_id FROM book_requests WHERE user_id = ? AND id = ?";
+        String updateAvail = "UPDATE book_copies SET available = TRUE WHERE id = ?";
 
-        try(Connection conn = DatabaseManager.getConnection();
-            PreparedStatement stmt = conn.prepareStatement(delRequest);
-            PreparedStatement copyIdFinderStmt = conn.prepareStatement(copyId);
-            PreparedStatement deallocCopy = conn.prepareStatement(updateAvail)) {
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement copyIdStmt = conn.prepareStatement(copyIdQuery);
+             PreparedStatement delStmt = conn.prepareStatement(delRequest)) {
 
-            System.out.println(user.getId());
+            copyIdStmt.setInt(1, user.getId());
+            copyIdStmt.setInt(2, requestId);
 
-            copyIdFinderStmt.setInt(1, user.getId());
-            copyIdFinderStmt.setInt(2, requestId);
+            int bookCopyId = -1;
 
-            ResultSet rs = copyIdFinderStmt.executeQuery();
+            try (ResultSet rs = copyIdStmt.executeQuery()) {
+                if (rs.next()) {
+                    bookCopyId = rs.getInt("book_copy_id");
+                }
+            } // ✅ ResultSet is now auto-closed
 
-            if (rs.next()) {
-                markBookAsAvailable(rs.getInt(1));
-                deallocCopy.setInt(1, rs.getInt(1));
-                deallocCopy.executeQuery();
-            }
+            // Delete the request first
+            delStmt.setInt(1, user.getId());
+            delStmt.setInt(2, requestId);
+            int rowsAffected = delStmt.executeUpdate();  // ✅ Use executeUpdate() for DELETE
 
-
-
-            stmt.setInt(1, user.getId());
-            stmt.setInt(2, requestId);
-            int rowsAffected = stmt.executeUpdate(); // Check how many rows were deleted
             if (rowsAffected > 0) {
                 System.out.println("Book request with ID " + requestId + " has been successfully cancelled.");
+
+                // Update availability only if a valid bookCopyId was retrieved
+                if (bookCopyId != -1) {
+                    try (PreparedStatement deallocStmt = conn.prepareStatement(updateAvail)) {
+                        deallocStmt.setInt(1, bookCopyId);
+                        deallocStmt.executeUpdate();  // ✅ Use executeUpdate() for UPDATE
+                    }
+                }
             } else {
                 System.out.println("No book request found with ID " + requestId + " for this user.");
             }
-        } catch (SQLException e){
+
+        } catch (SQLException e) {
             e.printStackTrace();
         }
     }
+
 
     public static void CancelReservationRequest(User user, int requestId){
         String delRequest = "delete from reservations where user_id = ? AND id = ?";

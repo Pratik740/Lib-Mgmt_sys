@@ -193,12 +193,12 @@ public class config {
                                           (4, 22, '2025-02-10', '2025-02-24', '2025-02-20'), -- Returned on time
                                           (4, 106, '2025-03-01', '2025-03-15', NULL),  -- Currently checked out
                                           (4, 31, '2025-03-15', '2025-03-29', '2025-03-29'), -- Returned on time
-                                          (4, 142, '2025-03-15', '2025-03-29', NULL),  -- Overdue, not returned
+                                          (4, 142, '2025-03-15', '2025-03-29', '2025-04-03'),  -- Overdue, not returned
                                           (4, 42, '2025-03-30', '2025-04-13', NULL),  -- Currently checked out
                                          \s
                                           -- User 5 transactions
                                           (5, 5, '2025-02-05', '2025-02-19', '2025-03-01'),  -- Returned late
-                                          (5, 28, '2025-03-10', '2025-03-24', NULL),  -- Overdue, not returned yet
+                                          (5, 28, '2025-03-10', '2025-03-24', '2025-04-031'),  -- Overdue, not returned yet
                                           (5, 109, '2025-03-20', '2025-04-03', NULL),  -- Currently checked out
                                          \s
                                           -- User 6 transactions
