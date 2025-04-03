@@ -140,7 +140,7 @@ public class LibrarianService {
 
     }
 
-    public void provideApprovals(Staff staff) {
+    public static void provideApprovals(Staff staff) {
         String auditLog = "insert into audit_log(staff_id, action) values(?,?)";
         String pendingRequests = """
                     UPDATE book_requests
@@ -280,7 +280,7 @@ public class LibrarianService {
             e.printStackTrace();
         }
     }
-    public void checkoutUser(Staff staff,int userId) {
+    public static void checkoutUser(Staff staff,int userId) {
         String getUser = "select * from users where id = ?";
         String auditLog = "insert into audit_log(staff_id, action) values(?,?)";
         try(Connection conn = DatabaseManager.getConnection();
@@ -302,7 +302,7 @@ public class LibrarianService {
         }
     }
     // It will contain all the books that are overdue(Book is with him/her) by any user.
-    public void overdueBooksOfUser(Staff staff,int userId){
+    public static void overdueBooksOfUser(Staff staff,int userId){
             String getOverDue = """
                     SELECT title,due_date,amount from
                     fines as f INNER JOIN transactions as t ON f.transaction_id = t.id
@@ -338,7 +338,7 @@ public class LibrarianService {
             }
     }
 
-    public void returnedBooksOnCurrentDate(Staff staff) {
+    public static void returnedBooksOnCurrentDate(Staff staff) {
         String returned = """
                 select title , amount , book_copy_id , user_id from fines as f
                 INNER JOIN transactions as t ON f.transaction_id = t.id
@@ -376,7 +376,7 @@ public class LibrarianService {
         }
     }
 
-    public void getMyProfile(Staff staff) {
+    public static void getMyProfile(Staff staff) {
         System.out.println("+----------------------+-----+---------------------------+------------+-------------+------------+");
         System.out.println("| Name                 | ID  | Email                     | Role       | Shift Start | Shift End  |");
         System.out.println("+----------------------+-----+---------------------------+------------+-------------+------------+");
@@ -392,7 +392,7 @@ public class LibrarianService {
         System.out.println("+----------------------+-----+---------------------------+------------+-------------+------------+");
     }
 
-    public void viewPendingApprovals(Staff staff) {
+    public static void viewPendingApprovals(Staff staff) {
         String requests = "Select * from book_requests where status = 'Pending'";
         String auditLog = "insert into audit_log(staff_id, action) values(?,?)";
         try(Connection conn = DatabaseManager.getConnection();

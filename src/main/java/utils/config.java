@@ -131,7 +131,17 @@ public class config {
                                         (27, 1, TRUE), (27, 2, TRUE), (27, 3, TRUE), (27, 4, TRUE), (27, 5, TRUE),
                                         (28, 1, TRUE), (28, 2, TRUE), (28, 3, TRUE), (28, 4, TRUE), (28, 5, TRUE),
                                         (29, 1, FALSE), (29, 2, FALSE), (29, 3, FALSE), (29, 4, FALSE), (29, 5, FALSE),
-                                        (30, 1, TRUE), (30, 2, TRUE), (30, 3, TRUE), (30, 4, TRUE), (30, 5, TRUE);
+                                        (30, 1, TRUE), (30, 2, TRUE), (30, 3, TRUE), (30, 4, TRUE), (30, 5, TRUE),
+                                        
+                                        -- Books 31 to 
+                                        (31, 1, TRUE), (31, 2, TRUE), (31, 3, TRUE), (31, 4, TRUE), (31, 5, TRUE),
+                                        (32, 1, TRUE), (32, 2, TRUE), (32, 3, TRUE), (32, 4, TRUE), (32, 5, TRUE),
+                                        (33, 1, TRUE), (33, 2, TRUE), (33, 3, TRUE), (33, 4, TRUE), (33, 5, TRUE),
+                                        (34, 1, TRUE), (34, 2, TRUE), (34, 1, TRUE), (34, 2, TRUE), (34, 3, TRUE),
+                                        (35, 1, TRUE), (35, 2, TRUE), (35, 3, TRUE), (35, 4, TRUE), (35, 5, TRUE),
+                                        (36, 1, TRUE), (36, 2, TRUE),(36, 3, TRUE), (36, 4, TRUE), (36, 5, TRUE),
+                                        (37, 1, TRUE), (37, 2, TRUE), (37, 3, TRUE), (37, 4, TRUE), (37, 5, TRUE),
+                                        (38, 1, TRUE), (38, 2, TRUE), (38, 3, TRUE), (38, 4, TRUE), (38, 5, TRUE);
                                         """;
             stmt.executeUpdate(populateBook_Copies);
 
