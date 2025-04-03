@@ -32,8 +32,7 @@ public class PersonService {
             SELECT distinct b.id, b.title, b.author, b.isbn, b.genre_id
             FROM books b
             JOIN genres g ON b.genre_id = g.id
-            JOIN book_copies bc ON b.id = bc.book_id
-            WHERE g.name = ? AND bc.available = TRUE
+            WHERE g.name = ?
         """;
 
         List<Book> books = new ArrayList<>();

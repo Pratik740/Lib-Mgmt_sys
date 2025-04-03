@@ -14,7 +14,7 @@ public class UserService extends PersonService {
 
     // Register a new user
     public static User registerUser(String name, String email, String passwordHash) {
-        String query = "INSERT INTO users (name, email, password_hash, date_of_joining) VALUES (?, ?, ?, current_timestamp())";
+        String query = "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)";
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {
             stmt.setString(1, name);
@@ -23,7 +23,7 @@ public class UserService extends PersonService {
 
             stmt.executeUpdate();
 
-            return loginUser(name, email);
+            return loginUser(email, passwordHash);
 
         } catch (SQLIntegrityConstraintViolationException e) {
             System.err.println("Enter an unique email address, current one already exists!");
@@ -57,6 +57,7 @@ public class UserService extends PersonService {
 
                 FineService.populateFineTable();
                 ReservationService.reserveToReqPopulate();
+                viewMessages(user);
 
                 return user;
             } else {
@@ -225,6 +226,8 @@ public class UserService extends PersonService {
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement stmt = conn.prepareStatement(delQuery)) {
 
+            stmt.setInt(1, user.getId());
+
             if (stmt.executeUpdate() > 0) {
                 return true;
             }
@@ -365,6 +368,8 @@ public class UserService extends PersonService {
             PreparedStatement copyIdFinderStmt = conn.prepareStatement(copyId);
             PreparedStatement deallocCopy = conn.prepareStatement(updateAvail)) {
 
+            System.out.println(user.getId());
+
             copyIdFinderStmt.setInt(1, user.getId());
             copyIdFinderStmt.setInt(2, requestId);
 
@@ -397,9 +402,9 @@ public class UserService extends PersonService {
             stmt.setInt(2,requestId);
             int rowsAffected = stmt.executeUpdate();
             if (rowsAffected > 0) {
-                System.out.println("Book request with ID " + requestId + " has been successfully removed from the reservations.");
+                System.out.println("Book reservation with ID " + requestId + " has been successfully removed from the reservations.");
             } else {
-                System.out.println("No book request found with ID " + requestId + " for this user.");
+                System.out.println("No book reservation found with ID " + requestId + " for this user.");
             }
         }
         catch(SQLException e){
@@ -417,6 +422,31 @@ public class UserService extends PersonService {
 
         } catch (SQLException e) {
             System.err.println("Failed to update book availability: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    public static void viewMessages(User user) {
+        String viewMessagesQuery = "select timestamp, description from messages where user_id = ? and readed = false";
+
+        String updateMessages = "update messages set readed = true where user_id = ? and readed = false";
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement viewMessages = conn.prepareStatement(viewMessagesQuery);
+             PreparedStatement updMes = conn.prepareStatement(updateMessages)) {
+
+            viewMessages.setInt(1, user.getId());
+            updMes.setInt(1, user.getId());
+
+            ResultSet rs = viewMessages.executeQuery();
+
+            System.out.println("Hello " + user.getName() + " !");
+            System.out.println("You have the following unread notifications: -");
+            while(rs.next()){
+                System.out.println(rs.getTimestamp(1).toLocalDateTime() + " | " + rs.getString(2));
+            }
+        } catch (SQLException e) {
+            System.err.println("Failed to update messages: " + e.getMessage());
             e.printStackTrace();
         }
     }

@@ -236,6 +236,7 @@ public class LibraryCLI {
                     do {
                         System.out.println("1.Guest\n2. SubscriptionUser\n3. Exit\n");
                         userChoice = scanner.nextInt();
+                        scanner.nextLine();
                         switch (userChoice) {
                             case 1:
                                 Guest();
