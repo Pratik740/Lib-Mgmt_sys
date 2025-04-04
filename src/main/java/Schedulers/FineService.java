@@ -17,9 +17,14 @@ public class FineService {
 
         String populationQuery = "insert into fines(user_id, transaction_id, amount, status) values(?,?,?,'Pending')";
 
+        String updTransactions = """
+                                 update transactions set fine_amount = datediff(return_date, issue_date)*10 where return_date = current_date;
+                                 """;
+
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement stmt1 = conn.prepareStatement(selectTransactions);
-             PreparedStatement stmt2 = conn.prepareStatement(populationQuery)){
+             PreparedStatement stmt2 = conn.prepareStatement(populationQuery);
+             PreparedStatement stmt3 = conn.prepareStatement(updTransactions);){
 
             ResultSet rs = stmt1.executeQuery();
 
@@ -29,6 +34,8 @@ public class FineService {
                 stmt2.setDouble(3, rs.getDouble("amount"));
                 stmt2.executeUpdate();
             }
+
+            stmt3.executeUpdate();
 
             updateFinesTable();
 

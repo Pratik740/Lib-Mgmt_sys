@@ -16,8 +16,7 @@ public class AdminService extends LibrarianService{
              PreparedStatement loginStmt = conn.prepareStatement(adminLoginQuery);
              PreparedStatement auditStmt = conn.prepareStatement(auditLog)) {
 
-            FineService.populateFineTable();
-            ReservationService.reserveToReqPopulate();
+
 
             loginStmt.setString(1, email);
             loginStmt.setString(2, password);
@@ -25,19 +24,27 @@ public class AdminService extends LibrarianService{
 
             if (rs.next()) {
 
-                auditStmt.setString(1, rs.getString("staff_id"));
+                auditStmt.setString(1, rs.getString("id"));
                 auditStmt.setString(2, "ADMIN: " + rs.getString("name") + " logged in");
                 auditStmt.executeUpdate();
 
-                return new Admin(rs.getInt("id"),
+
+                Admin admin =  new Admin(rs.getInt("id"),
                                  rs.getString("name"),
                                  rs.getString("email"),
                                  rs.getString("password_hash"));
+
+                FineService.populateFineTable();
+                ReservationService.reserveToReqPopulate();
+
+                return admin;
             }
             else {
                 System.out.println("Admin login Failed!!!");
                 return null;
             }
+
+
         } catch (SQLException e) {
             System.err.println("Error occurred during admin login: " + e.getMessage());
             e.printStackTrace();

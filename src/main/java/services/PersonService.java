@@ -16,10 +16,13 @@ public class PersonService {
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query);
              ResultSet rs = stmt.executeQuery()) {
-
-            System.out.println("Available Genres:");
+            System.out.println("\n====================================");
+            System.out.println("|       📚 Available Genres       |");
+            System.out.println("====================================");
+            int count = 0;
             while (rs.next()) {
-                System.out.println(rs.getString("name"));
+                count++;
+                System.out.printf("| %2d. %-25s |\n", count, rs.getString("name"));
             }
         } catch (SQLException e) {
             e.printStackTrace();

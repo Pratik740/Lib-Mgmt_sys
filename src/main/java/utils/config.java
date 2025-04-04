@@ -159,12 +159,14 @@ public class config {
                                    ('James Taylor', 'jtaylor@library.org', 'Reference432!', 'Librarian', '08:00:00', '16:00:00'),
                                    ('Sophia Brown', 'sbrown@library.org', 'ArchiveAccess654@', 'Librarian', '10:00:00', '18:00:00'),
                                    ('Daniel Patel', 'dpatel@library.org', 'Collection987#', 'Librarian', '13:00:00', '21:00:00'),
+                                   ('Temp', 'temp', 'temp','Librarian', '08:00:00', '16:00:00'),
                                   \s
                                    -- Admins
                                   ('Harsh Jaiswal', '112315070@cse.iiitp.ac.in', 'Master_Password_070', 'Admin', null, null),
                                   ('Ishan Nanglot', '112315074@cse.iiitp.ac.in', 'Master_Password_074', 'Admin', null, null),
                                   ('Pratik Jaiswal', '112315076@cse.iiitp.ac.in', 'Master_Password_076', 'Admin', null, null),
-                                  ('Jayata Roy', '112315077@cse.iiitp.ac.in', 'Master_Password_077', 'Admin', null, null);
+                                  ('Jayata Roy', '112315077@cse.iiitp.ac.in', 'Master_Password_077', 'Admin', null, null),
+                                  ('Administrator', 'admin', 'admin', 'Admin', null, null);
                                   \s""";
             stmt.executeUpdate(populateStaff);
 
@@ -191,12 +193,12 @@ public class config {
                                           (4, 22, '2025-02-10', '2025-02-24', '2025-02-20'), -- Returned on time
                                           (4, 106, '2025-03-01', '2025-03-15', NULL),  -- Currently checked out
                                           (4, 31, '2025-03-15', '2025-03-29', '2025-03-29'), -- Returned on time
-                                          (4, 142, '2025-03-15', '2025-03-29', NULL),  -- Overdue, not returned
+                                          (4, 142, '2025-03-15', '2025-03-29', '2025-04-03'),  -- Overdue, not returned
                                           (4, 42, '2025-03-30', '2025-04-13', NULL),  -- Currently checked out
                                          \s
                                           -- User 5 transactions
                                           (5, 5, '2025-02-05', '2025-02-19', '2025-03-01'),  -- Returned late
-                                          (5, 28, '2025-03-10', '2025-03-24', NULL),  -- Overdue, not returned yet
+                                          (5, 28, '2025-03-10', '2025-03-24', '2025-04-031'),  -- Overdue, not returned yet
                                           (5, 109, '2025-03-20', '2025-04-03', NULL),  -- Currently checked out
                                          \s
                                           -- User 6 transactions

@@ -26,10 +26,11 @@ public class Guest {
             for (Book book : this.currently_reading_books) {
                 System.out.println(book);
             }
+            System.out.println("\n\n\n");
             return true;
         }
         else {
-            System.out.println(this.name + " is not reading any books currently.");
+            System.out.println("\n\n" + this.name + " is not reading any books currently.\n\n\n");
             return false;
         }
     }

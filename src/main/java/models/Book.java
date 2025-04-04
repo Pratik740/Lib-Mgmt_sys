@@ -23,7 +23,9 @@ public class Book {
 
     @Override
     public String toString() {
-        return "Book ID: " + this.id + " Title: " + this.title + " Author: " + this.author + " ISBN: " + this.isbn + " Genre: " + this.genreId;
+        return String.format("[Book ID: %d] \"%s\" by %s | ISBN: %s | Genre ID: %d", id, title, author, isbn, genreId);
     }
+
+
 
 }

@@ -102,7 +102,6 @@ public class UserService extends PersonService {
     //Arraylist of borrowed books for a particular user
     public static void getListOfBorrowedBooks(User user) {
         String query = """
-                       
                 select id, title, author, isbn, genre_id from
                        (select b.book_id as book_id from book_copies b join transactions t on t.book_copy_id = b.id where t.user_id = ? and t.return_date is null)
                        as a
@@ -115,7 +114,7 @@ public class UserService extends PersonService {
             ResultSet rs = stmt.executeQuery();
 
             while (rs.next()) {
-                Book book = new Book(rs.getInt("book_id"),
+                Book book = new Book(rs.getInt("id"),
                         rs.getString("title"),
                         rs.getString("author"),
                         rs.getString("isbn"),
@@ -214,12 +213,12 @@ public class UserService extends PersonService {
     public static boolean deleteUser(User user) {
         if (!user.getBooks_borrowed().isEmpty()) {
             System.out.println("Cannot delete user: Books are still borrowed.");
-            return true;
+            return false;
         }
 
         if (FineService.pendingFines(user)) {
             System.out.println("Cannot delete u e still pending.");
-            return true;
+            return false;
         }
 
         String delQuery = "delete from users where id = ?";
@@ -327,15 +326,19 @@ public class UserService extends PersonService {
             PreparedStatement stmt1 = conn.prepareStatement(fromReservations)){
             stmt.setInt(1, user.getId());
             ResultSet rs = stmt.executeQuery();
-            System.out.println("Book Requests waiting for approvals : ");
-            System.out.printf("%-5s %-10s %-15s %-10s%n", "ID", "Book ID", "Request Date", "Status");
-            System.out.println("--------------------------------------------------");
-            while(rs.next()){
-                System.out.printf("%-5d %-10d %-15s %-10s%n",
-                        rs.getInt("id"),
-                        rs.getInt("book_id"),
-                        rs.getDate("request_date"),
-                        rs.getString("status"));
+            if(rs.next()){
+                System.out.println("Book Requests waiting for approvals : ");
+                System.out.printf("%-5s %-10s %-15s %-10s%n", "ID", "Book ID", "Request Date", "Status");
+                System.out.println("--------------------------------------------------");
+                do {
+                    System.out.printf("%-5d %-10d %-15s %-10s%n",
+                            rs.getInt("id"),
+                            rs.getInt("book_id"),
+                            rs.getDate("request_date"),
+                            rs.getString("status"));
+                } while (rs.next());
+            } else {
+                System.out.println("\n\nNo Book Requests waiting for approvals \n\n");
             }
             stmt1.setInt(1, user.getId());
             ResultSet rs1 = stmt1.executeQuery();
@@ -350,6 +353,8 @@ public class UserService extends PersonService {
                             rs1.getDate("expected_availability")
                     );
                 }while(rs1.next());
+            } else {
+                System.out.println("\n\nNo Books in the reservation table (expected date show)\n\n");
             }
 
         }
@@ -358,41 +363,50 @@ public class UserService extends PersonService {
         }
     }
 
-    public static void CancelBookRequest(User user, int requestId){
-        String delRequest = "delete from book_requests where user_id = ? AND id = ?";
-        String copyId = "select book_copy_id from book_requests where user_id = ? and  id = ?";
-        String updateAvail = "update book_copies set available = true where id = ?";
+    public static void CancelBookRequest(User user, int requestId) {
+        String delRequest = "DELETE FROM book_requests WHERE user_id = ? AND id = ?";
+        String copyIdQuery = "SELECT book_copy_id FROM book_requests WHERE user_id = ? AND id = ?";
+        String updateAvail = "UPDATE book_copies SET available = TRUE WHERE id = ?";
 
-        try(Connection conn = DatabaseManager.getConnection();
-            PreparedStatement stmt = conn.prepareStatement(delRequest);
-            PreparedStatement copyIdFinderStmt = conn.prepareStatement(copyId);
-            PreparedStatement deallocCopy = conn.prepareStatement(updateAvail)) {
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement copyIdStmt = conn.prepareStatement(copyIdQuery);
+             PreparedStatement delStmt = conn.prepareStatement(delRequest)) {
 
-            System.out.println(user.getId());
+            copyIdStmt.setInt(1, user.getId());
+            copyIdStmt.setInt(2, requestId);
 
-            copyIdFinderStmt.setInt(1, user.getId());
-            copyIdFinderStmt.setInt(2, requestId);
+            int bookCopyId = -1;
 
-            ResultSet rs = copyIdFinderStmt.executeQuery();
+            try (ResultSet rs = copyIdStmt.executeQuery()) {
+                if (rs.next()) {
+                    bookCopyId = rs.getInt("book_copy_id");
+                }
+            } // ✅ ResultSet is now auto-closed
 
-            markBookAsAvailable(rs.getInt(1));
+            // Delete the request first
+            delStmt.setInt(1, user.getId());
+            delStmt.setInt(2, requestId);
+            int rowsAffected = delStmt.executeUpdate();  // ✅ Use executeUpdate() for DELETE
 
-            deallocCopy.setInt(1, rs.getInt(1));
-            deallocCopy.executeQuery();
-
-
-            stmt.setInt(1, user.getId());
-            stmt.setInt(2, requestId);
-            int rowsAffected = stmt.executeUpdate(); // Check how many rows were deleted
             if (rowsAffected > 0) {
                 System.out.println("Book request with ID " + requestId + " has been successfully cancelled.");
+
+                // Update availability only if a valid bookCopyId was retrieved
+                if (bookCopyId != -1) {
+                    try (PreparedStatement deallocStmt = conn.prepareStatement(updateAvail)) {
+                        deallocStmt.setInt(1, bookCopyId);
+                        deallocStmt.executeUpdate();  // ✅ Use executeUpdate() for UPDATE
+                    }
+                }
             } else {
                 System.out.println("No book request found with ID " + requestId + " for this user.");
             }
-        } catch (SQLException e){
+
+        } catch (SQLException e) {
             e.printStackTrace();
         }
     }
+
 
     public static void CancelReservationRequest(User user, int requestId){
         String delRequest = "delete from reservations where user_id = ? AND id = ?";
